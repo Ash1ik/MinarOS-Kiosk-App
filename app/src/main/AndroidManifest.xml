@@ -12,11 +12,12 @@
     <!-- Essential Permissions for Kiosk and WebView -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:allowBackup="true"
-        android:banner="@mipmap/ic_launcher"
-        android:icon="@mipmap/ic_launcher"
+        android:banner="@drawable/ic_minaros_logo_foreground"
+        android:icon="@mipmap/ic_minaros_logo"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.NoActionBar">

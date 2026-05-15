@@ -62,7 +62,7 @@ fun KioskAppScreen(onOrientationChange: (Int) -> Unit) {
     val exitThreshold = 500L
     val minDelay = 100L
 
-    val loadUrl = "https://practicetestautomation.com/practice-test-login/"
+    val loadUrl = "https://minaros.com/100001"
 
     // Auto-Select Logic: Triggers when the drawer opens
     // Auto-Select & Memory Wipe Logic
@@ -97,7 +97,7 @@ fun KioskAppScreen(onOrientationChange: (Int) -> Unit) {
             context?.finish()
         } else {
             lastBackPressTime = currentTime
-            //scope.launch { drawerState.open() }
+            scope.launch { drawerState.open() }
         }
     }
 
