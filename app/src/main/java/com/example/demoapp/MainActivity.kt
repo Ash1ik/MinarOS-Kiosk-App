@@ -9,6 +9,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalTvMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        android.webkit.WebView.setWebContentsDebuggingEnabled(true)
 
         // Hide the top status bar for a true Kiosk feel
         window.setFlags(
@@ -17,12 +18,7 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            KioskAppScreen(
-                // Pass a function to handle rotation changes from Compose
-                onOrientationChange = { orientation ->
-                    requestedOrientation = orientation
-                }
-            )
+            AppNavigationWrapper()
         }
     }
 }

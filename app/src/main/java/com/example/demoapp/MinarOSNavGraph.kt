@@ -1,0 +1,38 @@
+package com.example.demoapp
+
+import androidx.compose.runtime.Composable
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.demoapp.menu.SettingsScreen
+
+
+object MenuScreen {
+    const val SETTINGS_SCREEN = "settings_screen"
+}
+
+@Composable
+fun MinarOSNavGraph(onOrientationChange: (Int) -> Unit) {
+    val navController = rememberNavController()
+    val mainScreen = "main_screen"
+
+    NavHost(navController = navController, startDestination =  mainScreen) {
+
+        // 1. The Main Web View & Drawer Screen
+        composable(mainScreen) {
+            MinarOsAppScreen(
+                navController = navController,
+                onOrientationChange = onOrientationChange,
+            )
+        }
+
+        // 2. The Dedicated Settings Screen
+        composable(MenuScreen.SETTINGS_SCREEN) {
+            SettingsScreen(
+                onBackPressed = {
+                    navController.popBackStack()
+                }
+            )
+        }
+    }
+}
