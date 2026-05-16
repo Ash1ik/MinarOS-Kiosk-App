@@ -18,7 +18,11 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            AppNavigationWrapper()
+            AppNavigationWrapper(
+                onOrientationChange = { orientation ->
+                    requestedOrientation = orientation
+                }
+            )
         }
     }
 }

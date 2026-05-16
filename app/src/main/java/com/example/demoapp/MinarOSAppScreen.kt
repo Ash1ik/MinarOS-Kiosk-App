@@ -3,6 +3,8 @@ package com.example.demoapp
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -33,6 +35,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,9 +46,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -66,8 +72,11 @@ fun MinarOsAppScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current as? Activity
-    val sharedPrefs = remember { context?.getSharedPreferences("MinarosPrefs", Context.MODE_PRIVATE) }
     val focusManager = LocalFocusManager.current
+    val sharedPrefs = remember { context?.getSharedPreferences("MinarosPrefs", Context.MODE_PRIVATE) }
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val firstItemFocusRequester = remember { FocusRequester() }
 
@@ -137,6 +146,7 @@ fun MinarOsAppScreen(
         }
     }
 
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = false,
@@ -167,6 +177,7 @@ fun MinarOsAppScreen(
 
                 // --- DRAWER ITEMS ---
                 Column(modifier = Modifier.fillMaxSize()) {
+                    // 1. Settings
                     DrawerMenuItem(
                         title = "Settings",
                         subtitle = "Change Your Preference",
@@ -180,6 +191,27 @@ fun MinarOsAppScreen(
                     }
                     HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
 
+                    // 2. Orientation
+                    DrawerMenuItem(
+                        title = "Rotate Screen",
+                        subtitle = "Toggle next orientation",
+                        icon = ImageVector.vectorResource(R.drawable.ic_screen_rotation)
+                    ) {
+                        scope.launch { drawerState.close() }
+
+                        // Just check the current state and jump to the next one
+                        val nextOrientation = when (context?.requestedOrientation) {
+                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+                            ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+                            else -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                        }
+
+                        onOrientationChange(nextOrientation)
+                    }
+                    HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+
+                    // 3. Refresh
                     DrawerMenuItem(
                         title = "Refresh",
                         subtitle = "Refresh the screen",
