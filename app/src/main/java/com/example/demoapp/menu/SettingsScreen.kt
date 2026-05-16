@@ -1,7 +1,6 @@
 package com.example.demoapp.menu
 
 import android.content.Context
-import android.view.KeyEvent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -40,7 +38,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,13 +53,6 @@ fun SettingsScreen(onBackPressed: () -> Unit) {
     val context = LocalContext.current
     val sharedPrefs =
         remember { context.getSharedPreferences("MinarosPrefs", Context.MODE_PRIVATE) }
-
-    // Track both Base URL and Endpoint dynamically
-    var currentBaseUrl by remember {
-        mutableStateOf(
-            sharedPrefs.getString("BASE_URL", "https://minaros.com/") ?: "https://minaros.com/"
-        )
-    }
 
     // Only track and save the Endpoint now
     var currentEndpoint by remember {
