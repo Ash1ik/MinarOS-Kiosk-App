@@ -54,11 +54,14 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(onBackPressed: () -> Unit) {
     val context = LocalContext.current
-    val sharedPrefs = remember { context.getSharedPreferences("MinarosPrefs", Context.MODE_PRIVATE) }
+    val sharedPrefs =
+        remember { context.getSharedPreferences("MinarosPrefs", Context.MODE_PRIVATE) }
 
     // Track both Base URL and Endpoint dynamically
     var currentBaseUrl by remember {
-        mutableStateOf(sharedPrefs.getString("BASE_URL", "https://minaros.com/") ?: "https://minaros.com/")
+        mutableStateOf(
+            sharedPrefs.getString("BASE_URL", "https://minaros.com/") ?: "https://minaros.com/"
+        )
     }
 
     // Only track and save the Endpoint now
@@ -73,10 +76,16 @@ fun SettingsScreen(onBackPressed: () -> Unit) {
 
     LaunchedEffect(Unit) { backButtonFocus.requestFocus() }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FA))) {
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .verticalScroll(rememberScrollState())
+        .background(Color(0xFFF8F9FA))) {
         // --- HEADER --- (Keep your existing Header code here)
         Row(
-            modifier = Modifier.fillMaxWidth().background(BrandColor).padding(horizontal = 24.dp, vertical = 20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(BrandColor)
+                .padding(horizontal = 24.dp, vertical = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             var isBackFocused by remember { mutableStateOf(false) }
@@ -86,57 +95,60 @@ fun SettingsScreen(onBackPressed: () -> Unit) {
                     .onFocusChanged { isBackFocused = it.isFocused }
                     .focusable()
                     .clickable { onBackPressed() }
-                    .background(if (isBackFocused) Color.White.copy(alpha = 0.2f) else Color.Transparent, RoundedCornerShape(8.dp))
+                    .background(
+                        if (isBackFocused) Color.White.copy(alpha = 0.2f) else Color.Transparent,
+                        RoundedCornerShape(8.dp)
+                    )
                     .padding(8.dp)
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(32.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Text("Kiosk Settings", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "MinarOS Settings",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         // --- CONTENT ---
-        Column(modifier = Modifier.padding(48.dp)) {
-
-            // 1. Base URL
-            Text("Base URL", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = BrandColor)
-            OutlinedTextField(
-                value = currentBaseUrl,
-                onValueChange = { currentBaseUrl = it }, // Does nothing, it's read-only
-                enabled = true, // Disables focus and typing
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(0.6f)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
+        Column(modifier = Modifier.padding(8.dp)) {
 
             // 2. Mosque ID / Endpoint (Editable)
             Text("Mosque ID", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = BrandColor)
             Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = currentEndpoint,
-                    onValueChange = { currentEndpoint = it },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                TvButton("Save Configuration") {
-                    // Save ONLY the endpoint to SharedPreferences
-                    sharedPrefs.edit { putString("TARGET_ENDPOINT", currentEndpoint) }
-                    Toast.makeText(context, "Saved! Please refresh the main screen.", Toast.LENGTH_LONG).show()
-                }
+            OutlinedTextField(
+                value = currentEndpoint,
+                onValueChange = { currentEndpoint = it },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            TvButton("Save Configuration") {
+                // Save ONLY the endpoint to SharedPreferences
+                sharedPrefs.edit { putString("TARGET_ENDPOINT", currentEndpoint) }
+                Toast.makeText(context, "Saved! Please refresh the main screen.", Toast.LENGTH_LONG)
+                    .show()
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(color = Color.LightGray)
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Cache Setting
             Text("Web Caching", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = BrandColor)
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (isCacheEnabled) "Web Caching is ENABLED" else "Web Caching is DISABLED", modifier = Modifier.weight(1f))
+                Text(
+                    if (isCacheEnabled) "Web Caching is ENABLED" else "Web Caching is DISABLED",
+                    modifier = Modifier.weight(1f)
+                )
                 Switch(
                     checked = isCacheEnabled,
                     onCheckedChange = {
@@ -146,12 +158,17 @@ fun SettingsScreen(onBackPressed: () -> Unit) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(color = Color.LightGray)
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Updates
-            Text("System Updates", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = BrandColor)
+            Text(
+                "System Updates",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = BrandColor
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TvButton("Check for Updates") {
@@ -162,7 +179,7 @@ fun SettingsScreen(onBackPressed: () -> Unit) {
                         Toast.makeText(context, updateStatus, Toast.LENGTH_SHORT).show()
                     }
                 }
-                Spacer(modifier = Modifier.width(24.dp))
+                Spacer(modifier = Modifier.width(16.dp))
                 Text(updateStatus, color = Color.DarkGray, fontSize = 16.sp)
             }
         }

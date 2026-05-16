@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -46,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -74,9 +76,6 @@ fun MinarOsAppScreen(
     val context = LocalContext.current as? Activity
     val focusManager = LocalFocusManager.current
     val sharedPrefs = remember { context?.getSharedPreferences("MinarosPrefs", Context.MODE_PRIVATE) }
-
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val firstItemFocusRequester = remember { FocusRequester() }
 
@@ -153,42 +152,43 @@ fun MinarOsAppScreen(
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.width(360.dp),
-                drawerContainerColor = Color.White
+                drawerContainerColor = Color.White,
+                drawerShape = RectangleShape
             ) {
                 // --- HEADER SECTION ---
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(BrandColor)
-                        .padding(vertical = 32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.Start
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_minaros_logo_white),
                         contentDescription = "App Logo",
-                        modifier = Modifier.size(80.dp)
+                        modifier = Modifier.size(120.dp)
+                            .padding(start = 24.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("MINAROS App", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Text("Version: 1.0", color = Color.LightGray, fontSize = 14.sp)
+//                    Text("Version: 1.0", color = Color.LightGray, fontSize = 14.sp)
                 }
 
                 HorizontalDivider(color = Color.LightGray, thickness = 1.dp)
 
                 // --- DRAWER ITEMS ---
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // 1. Settings
+                    // 1. Refresh
                     DrawerMenuItem(
-                        title = "Settings",
-                        subtitle = "Change Your Preference",
-                        icon = Icons.Filled.Settings,
+                        title = "Refresh",
+                        subtitle = "Refresh the screen",
+                        icon = Icons.Filled.Refresh,
                         modifier = Modifier.focusRequester(firstItemFocusRequester)
                     ) {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate(MenuScreen.SETTINGS_SCREEN)
-                        }
+                        scope.launch { drawerState.close() }
+                        // Using the remembered WebView to reload!
+                        webView.reload()
                     }
+
                     HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
 
                     // 2. Orientation
@@ -209,17 +209,19 @@ fun MinarOsAppScreen(
 
                         onOrientationChange(nextOrientation)
                     }
+
                     HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
 
-                    // 3. Refresh
+                    // 3. Settings
                     DrawerMenuItem(
-                        title = "Refresh",
-                        subtitle = "Refresh the screen",
-                        icon = Icons.Filled.Refresh
+                        title = "Settings",
+                        subtitle = "Change Your Preference",
+                        icon = Icons.Filled.Settings,
                     ) {
-                        scope.launch { drawerState.close() }
-                        // Using the remembered WebView to reload!
-                        webView.reload()
+                        scope.launch {
+                            drawerState.close()
+                            navController.navigate(MenuScreen.SETTINGS_SCREEN)
+                        }
                     }
                     HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
 

@@ -65,22 +65,5 @@ fun CustomSplashScreen() {
             contentDescription = "MinarOs Logo",
             modifier = Modifier.size(160.dp) // Make it nice and big for the TV
         )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "MINAROS App",
-            color = BrandColor ,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Version: 1.0",
-            color = BrandColor.copy(alpha = 0.75f),
-            fontSize = 18.sp
-        )
     }
 }
