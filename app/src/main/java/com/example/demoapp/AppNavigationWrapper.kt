@@ -16,7 +16,10 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 @Composable
-fun AppNavigationWrapper(onOrientationChange: (Int) -> Unit) {
+fun AppNavigationWrapper(
+    onOrientationChange: (Int) -> Unit,
+    onAlwaysOnChanged: (Boolean) -> Unit
+) {
     // State to track if the splash screen is showing
     var showSplash by rememberSaveable { mutableStateOf(true) }
 
@@ -33,7 +36,8 @@ fun AppNavigationWrapper(onOrientationChange: (Int) -> Unit) {
         // Only render the WebView/App if the splash is done, or let it load behind?
         // Usually best to let it mount behind the splash screen so the WebView has time to load.
         MinarOSNavGraph(
-            onOrientationChange = onOrientationChange
+            onOrientationChange = onOrientationChange,
+            onAlwaysOnChanged = onAlwaysOnChanged
         )
 
         // 2. The Splash Screen Overlay
