@@ -6,7 +6,6 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalTvMaterial3Api::class)
