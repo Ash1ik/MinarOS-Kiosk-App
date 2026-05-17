@@ -174,7 +174,7 @@ fun MinarOsAppScreen(
                     DrawerMenuItem(
                         title = "Refresh",
                         subtitle = "Refresh the screen",
-                        icon = Icons.Filled.Refresh,
+                        icon = ImageVector.vectorResource(R.drawable.ic_refresh),
                         modifier = Modifier.focusRequester(firstItemFocusRequester)
                     ) {
                         scope.launch { drawerState.close() }
@@ -188,7 +188,7 @@ fun MinarOsAppScreen(
                     DrawerMenuItem(
                         title = "Rotate Screen",
                         subtitle = "Toggle next orientation",
-                        icon = ImageVector.vectorResource(R.drawable.ic_screen_rotation)
+                        icon = ImageVector.vectorResource(R.drawable.ic_rotation)
                     ) {
                         scope.launch { drawerState.close() }
 
@@ -209,7 +209,7 @@ fun MinarOsAppScreen(
                     DrawerMenuItem(
                         title = "Settings",
                         subtitle = "Change Your Preference",
-                        icon = Icons.Filled.Settings,
+                        icon = ImageVector.vectorResource(R.drawable.ic_settings),
                     ) {
                         scope.launch {
                             drawerState.close()
@@ -221,7 +221,7 @@ fun MinarOsAppScreen(
                     DrawerMenuItem(
                         title = "About",
                         subtitle = "Application Information",
-                        icon = Icons.Filled.Info
+                        icon = ImageVector.vectorResource(R.drawable.ic_about)
                     ) {
                         scope.launch { drawerState.close() }
                     }
@@ -230,7 +230,7 @@ fun MinarOsAppScreen(
                     DrawerMenuItem(
                         title = "Exit",
                         subtitle = "Close the application",
-                        icon = Icons.Filled.Close
+                        icon = ImageVector.vectorResource(R.drawable.ic_exit)
                     ) {
                         scope.launch { context?.finishAffinity() }
                     }
