@@ -61,6 +61,7 @@ import kotlinx.coroutines.launch
 @SuppressLint("SetJavaScriptEnabled", "ContextCastToActivity")
 @Composable
 fun MinarOsAppScreen(
+    currentOrientation: Int,
     navController: NavController,
     onOrientationChange: (Int) -> Unit
 ) {
@@ -193,11 +194,12 @@ fun MinarOsAppScreen(
                         scope.launch { drawerState.close() }
 
                         // Just check the current state and jump to the next one
-                        val nextOrientation = when (context?.requestedOrientation) {
-                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
-                            ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
-                            else -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                        val nextOrientation = when (currentOrientation) {
+                            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+                            ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+                            ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                            else -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                         }
 
                         onOrientationChange(nextOrientation)

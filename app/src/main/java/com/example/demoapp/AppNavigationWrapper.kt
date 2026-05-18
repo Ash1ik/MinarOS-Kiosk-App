@@ -11,41 +11,51 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 @Composable
 fun AppNavigationWrapper(
+    currentOrientation: Int,
+    internalFlipAngle: Float,
     onOrientationChange: (Int) -> Unit,
     onAlwaysOnChanged: (Boolean) -> Unit
 ) {
-    // State to track if the splash screen is showing
-    var showSplash by rememberSaveable { mutableStateOf(true) }
+    var showSplash by remember { mutableStateOf(true) }
 
-    // Timer for the Splash Screen
     LaunchedEffect(key1 = true) {
-        if (showSplash) {
-            delay(2500L)
-            showSplash = false
-        }
+        delay(2500L)
+        showSplash = false
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        // 1. The Main App (Loads in the background)
-        // Only render the WebView/App if the splash is done, or let it load behind?
-        // Usually best to let it mount behind the splash screen so the WebView has time to load.
-        MinarOSNavGraph(
-            onOrientationChange = onOrientationChange,
-            onAlwaysOnChanged = onAlwaysOnChanged
-        )
-
-        // 2. The Splash Screen Overlay
-        AnimatedVisibility(
-            visible = showSplash,
-            exit = fadeOut(animationSpec = tween(durationMillis = 800)) // Smooth fade out
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    // If the TV requires an upside-down mount adjustment,
+                    // this spins the responsive window perfectly into place.
+                    rotationZ = internalFlipAngle
+                }
         ) {
-            CustomSplashScreen()
+            MinarOSNavGraph(
+                onOrientationChange = onOrientationChange,
+                onAlwaysOnChanged = onAlwaysOnChanged,
+                currentOrientation = currentOrientation
+            )
+
+            AnimatedVisibility(
+                visible = showSplash,
+                exit = fadeOut(animationSpec = tween(800))
+            ) {
+                CustomSplashScreen()
+            }
         }
     }
 }

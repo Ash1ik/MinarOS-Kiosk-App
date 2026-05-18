@@ -13,6 +13,7 @@ object MenuScreen {
 
 @Composable
 fun MinarOSNavGraph(
+    currentOrientation: Int,
     onOrientationChange: (Int) -> Unit,
     onAlwaysOnChanged: (Boolean) -> Unit
 ) {
@@ -25,7 +26,8 @@ fun MinarOSNavGraph(
         composable(mainScreen) {
             MinarOsAppScreen(
                 navController = navController,
-                onOrientationChange = onOrientationChange
+                onOrientationChange = onOrientationChange,
+                currentOrientation = currentOrientation
             )
         }
 
