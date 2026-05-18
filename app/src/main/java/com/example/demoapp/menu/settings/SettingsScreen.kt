@@ -61,8 +61,7 @@ fun SettingsScreen(
     onAlwaysOnChanged: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
-    val sharedPrefs =
-        remember { context.getSharedPreferences("MinarosPrefs", Context.MODE_PRIVATE) }
+    val sharedPrefs = remember { context.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
     val scope = rememberCoroutineScope()
     val backButtonFocus = remember { FocusRequester() }
 
@@ -142,11 +141,12 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(12.dp))
-            TvButton("Save Configuration") {
-                sharedPrefs.edit { putString("TARGET_ENDPOINT", currentEndpoint) }
-                Toast.makeText(context, "Saved! Please refresh the main screen.", Toast.LENGTH_LONG)
-                    .show()
-            }
+            TvButton(
+                text = "Save Configuration",
+                onClick = {
+                    sharedPrefs.edit { putString("TARGET_ENDPOINT", currentEndpoint) }
+                }
+            )
 
             SectionDivider()
 
@@ -210,14 +210,16 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TvButton("Check for Updates") {
-                    scope.launch {
-                        updateStatus = "Checking remote server..."
-                        delay(1500)
-                        updateStatus = "App is up to date (v1.0)"
-                        Toast.makeText(context, updateStatus, Toast.LENGTH_SHORT).show()
+                TvButton(
+                    text = "Check for Updates",
+                    onClick = {
+                        scope.launch {
+                            updateStatus = "Checking remote server..."
+                            delay(1500)
+                            updateStatus = "App is up to date (v1.0)"
+                        }
                     }
-                }
+                )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(updateStatus, color = Color.DarkGray, fontSize = 16.sp)
             }

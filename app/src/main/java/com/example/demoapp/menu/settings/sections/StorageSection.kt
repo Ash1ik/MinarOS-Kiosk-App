@@ -1,5 +1,6 @@
 package com.example.demoapp.menu.settings.sections
 
+import android.webkit.WebView
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -25,14 +26,17 @@ fun StorageSection() {
         Text("Clear locally stored website assets if things look out of date", fontSize = 14.sp, color = Color.Gray)
         Spacer(modifier = Modifier.height(12.dp))
 
-        TvButton("Delete Cache Memory") {
-            try {
-                val webView = android.webkit.WebView(context)
-                webView.clearCache(true)
-                Toast.makeText(context, "Cache memory purged successfully!", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(context, "Clear task failed. Please retry.", Toast.LENGTH_SHORT).show()
+        TvButton(
+            text = "Delete Cache Memory",
+            onClick = {
+                try {
+                    val webView = WebView(context)
+                    webView.clearCache(true)
+                    Toast.makeText(context, "Cache memory purged successfully!", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Clear task failed. Please retry.", Toast.LENGTH_SHORT).show()
+                }
             }
-        }
+        )
     }
 }

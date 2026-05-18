@@ -23,13 +23,6 @@ fun AppNavigationWrapper(
     onOrientationChange: (Int) -> Unit,
     onAlwaysOnChanged: (Boolean) -> Unit
 ) {
-    var showSplash by remember { mutableStateOf(true) }
-
-    LaunchedEffect(key1 = true) {
-        delay(2500L)
-        showSplash = false
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -49,19 +42,20 @@ fun AppNavigationWrapper(
                 onAlwaysOnChanged = onAlwaysOnChanged,
                 currentOrientation = currentOrientation
             )
-
-            AnimatedVisibility(
-                visible = showSplash,
-                exit = fadeOut(animationSpec = tween(800))
-            ) {
-                CustomSplashScreen()
-            }
         }
     }
 }
 
 @Composable
-fun CustomSplashScreen() {
+fun CustomSplashScreen(
+    onSplashFinished: () -> Unit // Callback to inform MainActivity the time is up
+) {
+    // This side-effect safely handles the countdown timer within the splash layout scope
+    LaunchedEffect(key1 = true) {
+        delay(2500L) // Holds your logo on screen cleanly for 2.5 seconds
+        onSplashFinished() // Triggers the navigation state branch change
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -73,7 +67,7 @@ fun CustomSplashScreen() {
         Image(
             painter = painterResource(id = R.drawable.ic_minaros_logo),
             contentDescription = "MinarOs Logo",
-            modifier = Modifier.size(160.dp) // Make it nice and big for the TV
+            modifier = Modifier.size(160.dp) // Perfect visibility footprint for large TV panels
         )
     }
 }

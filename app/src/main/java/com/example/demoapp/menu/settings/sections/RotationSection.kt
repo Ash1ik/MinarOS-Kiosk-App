@@ -24,12 +24,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,17 +47,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
+import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.example.demoapp.ui.theme.BrandColor
 
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun RotationSection(
     selectedRotation: Int,
     onRotationSelected: (Int) -> Unit
 ) {
     val context = LocalContext.current
-    val sharedPrefs = remember { context.getSharedPreferences("MinarosPrefs", Context.MODE_PRIVATE) }
+    val sharedPrefs = remember { context.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
+
     var isExpanded by remember { mutableStateOf(false) }
     var isHeaderFocused by remember { mutableStateOf(false) }
+
+    var showConfirmationDialog by remember { mutableStateOf(false) }
+    var pendingRotationFlag by remember { mutableIntStateOf(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) }
+    var pendingRotationLabel by remember { mutableStateOf("") }
+
+    val configurations = listOf(
+        ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE to "Landscape (Standard)",
+        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT to "Portrait Left (Vertical)",
+        ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT to "Portrait Right (Flipped Vertical)",
+        ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE to "Reverse Landscape (Upside Down)"
+    )
 
     Column {
         Row(
@@ -93,15 +112,9 @@ fun RotationSection(
                     .padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val configurations = listOf(
-                    ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE to "Landscape (Standard)",
-                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT to "Portrait Left (Vertical)",
-                    ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT to "Portrait Right (Flipped Vertical)",
-                    ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE to "Reverse Landscape (Upside Down)"
-                )
-
                 configurations.forEach { (orientationFlag, orientationLabel) ->
                     var isItemFocused by remember { mutableStateOf(false) }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -112,9 +125,9 @@ fun RotationSection(
                             .onFocusChanged { isItemFocused = it.isFocused }
                             .focusable()
                             .clickable {
-                                onRotationSelected(orientationFlag)
-                                sharedPrefs.edit { putInt("SAVED_ORIENTATION", orientationFlag) }
-                                Toast.makeText(context, "Orientation applied. Will refresh on restart.", Toast.LENGTH_SHORT).show()
+                                pendingRotationFlag = orientationFlag
+                                pendingRotationLabel = orientationLabel
+                                showConfirmationDialog = true
                             }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -135,5 +148,55 @@ fun RotationSection(
                 }
             }
         }
+    }
+
+    if (showConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmationDialog = false },
+            title = {
+                Text(
+                    text = "Confirm Orientation Change",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to change the visual orientation layout to \"$pendingRotationLabel\"? This adjustment will take effect once the application is manually refreshed or restarted.",
+                    fontSize = 14.sp,
+                    color = Color.DarkGray
+                )
+            },
+            // FIX: Put your custom spacing Row layout straight into the confirmButton slot parameter!
+            confirmButton = {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = { showConfirmationDialog = false }
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    Button(
+                        onClick = {
+                            // Commit changes to database only
+                            sharedPrefs.edit { putInt("SAVED_ORIENTATION", pendingRotationFlag) }
+
+                            showConfirmationDialog = false
+                            Toast.makeText(context, "Saved successfully! Changes will apply on refresh or restart.", Toast.LENGTH_LONG).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandColor)
+                    ) {
+                        Text("Save", color = Color.White)
+                    }
+                }
+            }
+        )
     }
 }

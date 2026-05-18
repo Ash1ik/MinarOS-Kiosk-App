@@ -69,7 +69,7 @@ fun MinarOsAppScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current as? Activity
     val focusManager = LocalFocusManager.current
-    val sharedPrefs = remember { context?.getSharedPreferences("MinarosPrefs", Context.MODE_PRIVATE) }
+    val sharedPrefs = remember { context?.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
 
     val firstItemFocusRequester = remember { FocusRequester() }
 
@@ -139,6 +139,7 @@ fun MinarOsAppScreen(
         }
     }
 
+    val updatedOrientation = sharedPrefs?.getInt("SAVED_ORIENTATION", ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -178,6 +179,7 @@ fun MinarOsAppScreen(
                         icon = ImageVector.vectorResource(R.drawable.ic_refresh),
                         modifier = Modifier.focusRequester(firstItemFocusRequester)
                     ) {
+                        updatedOrientation?.let { onOrientationChange(it) }
                         scope.launch { drawerState.close() }
                         // Using the remembered WebView to reload!
                         webView.reload()

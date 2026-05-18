@@ -75,28 +75,32 @@ fun DrawerMenuItem(
 
 
 @Composable
-fun TvButton(text: String, onClick: () -> Unit) {
+fun TvButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier // Added to support FocusRequesters from parent containers easily!
+) {
     var isFocused by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
+            // 1. First, track focus changes cleanly
             .onFocusChanged { isFocused = it.isFocused }
+            // 2. Make the item focusable in the TV layout tree hierarchy
             .focusable()
+            // 3. The built-in .clickable handling auto-maps D-pad Center & Enter perfectly
+            // once focus is established on the item plane.
             .clickable { onClick() }
-            .onKeyEvent { keyEvent ->
-                if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                    (keyEvent.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
-                            keyEvent.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_ENTER)) {
-                    onClick()
-                    true
-                } else false
-            }
             .background(
-                color = if (isFocused) BrandColor else Color.LightGray,
+                color = if (isFocused) BrandColor else Color.LightGray, // Clean off-white fallback
                 shape = RoundedCornerShape(8.dp)
             )
             .padding(horizontal = 24.dp, vertical = 14.dp)
     ) {
-        Text(text = text, color = if (isFocused) Color.White else Color.Black, fontWeight = FontWeight.Bold)
+        Text(
+            text = text,
+            color = if (isFocused) Color.White else Color.Black,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
