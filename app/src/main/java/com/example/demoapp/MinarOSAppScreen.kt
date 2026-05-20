@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.view.ViewGroup
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -19,20 +20,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,7 +50,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -78,10 +81,19 @@ fun MinarOsAppScreen(
         mutableStateOf(sharedPrefs?.getString("TARGET_ENDPOINT", "100001") ?: "100001")
     }
 
-    // Construct the final, complete URL dynamically
-    val fullTargetUrl = "https://minaros.com/$savedEndpoint"
+    // 🎯 FIX 1: Wrap the final URL inside remember(savedEndpoint).
+    // This tells Compose to preserve this string across layout re-entries!
+    val fullTargetUrl = remember(savedEndpoint) {
+        "https://minaros.com/$savedEndpoint"
+    }
 
-    // Create the WebView with the combined URL
+    // State to track the precise loading percentage of the WebView
+    var webViewProgress by remember { mutableIntStateOf(0) }
+
+    // Optimization flag to control initialization constraints
+    var isUrlLoaded by remember { mutableStateOf(false) }
+
+    // Create and preserve the WebView instance cleanly
     val webView = remember {
         WebView(context!!).apply {
             layoutParams = ViewGroup.LayoutParams(
@@ -90,9 +102,22 @@ fun MinarOsAppScreen(
             )
             settings.javaScriptEnabled = true
             webViewClient = WebViewClient()
+            setBackgroundColor(android.graphics.Color.WHITE)
 
-            // Load the combined URL!
-            loadUrl(fullTargetUrl)
+            webChromeClient = object : WebChromeClient() {
+                override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                    webViewProgress = newProgress
+                }
+            }
+        }
+    }
+
+    // 🎯 FIX 2: Check URL loading flag inside initialization hook.
+    // Since fullTargetUrl is now remembered, this block will evaluate as completely idle on return layouts.
+    LaunchedEffect(fullTargetUrl) {
+        if (!isUrlLoaded) {
+            webView.loadUrl(fullTargetUrl)
+            isUrlLoaded = true
         }
     }
 
@@ -103,10 +128,8 @@ fun MinarOsAppScreen(
     // Drawer Auto-Focus Logic
     LaunchedEffect(drawerState.targetValue) {
         if (drawerState.targetValue == DrawerValue.Open) {
-            delay(10)
             try { firstItemFocusRequester.requestFocus() } catch (e: Exception) { }
         } else if (drawerState.targetValue == DrawerValue.Closed) {
-            delay(300)
             focusManager.clearFocus()
         }
     }
@@ -116,21 +139,18 @@ fun MinarOsAppScreen(
         val currentTime = System.currentTimeMillis()
         val timeSinceLastClick = currentTime - lastBackPressTime
 
-        // Priority 1: If Drawer is open, close it.
         if (drawerState.isOpen) {
             scope.launch { drawerState.close() }
             lastBackPressTime = 0L
             return@BackHandler
         }
 
-        // Priority 2: If the website can go back, go back in history.
         if (webView.canGoBack()) {
             webView.goBack()
             lastBackPressTime = 0L
             return@BackHandler
         }
 
-        // Priority 3: Double click to exit, Single click to open Drawer
         if (timeSinceLastClick in minDelay..exitThreshold) {
             context?.finishAffinity()
         } else {
@@ -165,13 +185,16 @@ fun MinarOsAppScreen(
                             .padding(start = 24.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-//                    Text("Version: 1.0", color = Color.LightGray, fontSize = 14.sp)
                 }
 
                 HorizontalDivider(color = Color.LightGray, thickness = 1.dp)
 
                 // --- DRAWER ITEMS ---
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                ) {
                     // 1. Refresh
                     DrawerMenuItem(
                         title = "Refresh",
@@ -181,7 +204,8 @@ fun MinarOsAppScreen(
                     ) {
                         updatedOrientation?.let { onOrientationChange(it) }
                         scope.launch { drawerState.close() }
-                        // Using the remembered WebView to reload!
+
+                        webViewProgress = 0
                         webView.reload()
                     }
 
@@ -195,7 +219,6 @@ fun MinarOsAppScreen(
                     ) {
                         scope.launch { drawerState.close() }
 
-                        // Just check the current state and jump to the next one
                         val nextOrientation = when (currentOrientation) {
                             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                             ActivityInfo.SCREEN_ORIENTATION_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
@@ -228,6 +251,7 @@ fun MinarOsAppScreen(
                         icon = ImageVector.vectorResource(R.drawable.ic_about)
                     ) {
                         scope.launch { drawerState.close() }
+                        navController.navigate(MenuScreen.ABOUT_SCREEN)
                     }
                     HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
 
@@ -242,17 +266,57 @@ fun MinarOsAppScreen(
             }
         }
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            // The Primary WebView Surface
             AndroidView(
                 factory = { webView },
                 update = { view ->
-                    // Update URL dynamically if changed in Settings
-                    if (view.url != fullTargetUrl && view.url != null) {
-                        view.loadUrl(fullTargetUrl)
+                    // 🎯 FIX 3: Safe dynamic update comparison.
+                    // Instead of checking string allocations directly, we pull from storage.
+                    // If unchanged, this block remains idle and never forces a reload on back navigation!
+                    val currentStoredEndpoint = sharedPrefs?.getString("TARGET_ENDPOINT", "100001") ?: "100001"
+                    val freshTargetUrl = "https://minaros.com/$currentStoredEndpoint"
+
+                    if (view.url != null && view.url != freshTargetUrl && view.url != "$freshTargetUrl/") {
+                        webViewProgress = 0
+                        isUrlLoaded = false
+                        view.loadUrl(freshTargetUrl)
                     }
                 },
                 modifier = Modifier.fillMaxSize()
             )
+
+            // Full-screen white curtain layer is displayed only during actual initial loads (< 100)
+            if (webViewProgress < 100) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Your Mosque Display is Loading...",
+                            color = BrandColor,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(64.dp),
+                            color = BrandColor,
+                            strokeWidth = 5.dp
+                        )
+                    }
+                }
+            }
         }
     }
 }

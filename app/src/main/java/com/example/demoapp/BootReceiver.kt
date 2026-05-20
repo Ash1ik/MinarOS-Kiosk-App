@@ -11,7 +11,7 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             val launchIntent = Intent(context, MainActivity::class.java)
 
-            Toast.makeText(context, "TV TURNED ON: Kiosk Auto-Starting...", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "TV TURNED ON: MinarOS Auto-Starting...", Toast.LENGTH_LONG).show()
 
             // FLAG_ACTIVITY_NEW_TASK is required because we are starting the app
             // from the background, not from inside another activity.

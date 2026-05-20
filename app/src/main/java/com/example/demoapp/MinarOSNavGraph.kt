@@ -4,11 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.demoapp.menu.about.AboutScreen
 import com.example.demoapp.menu.settings.SettingsScreen
 
 
 object MenuScreen {
     const val SETTINGS_SCREEN = "settings_screen"
+    const val ABOUT_SCREEN = "about_screen"
 }
 
 @Composable
@@ -39,6 +41,14 @@ fun MinarOSNavGraph(
                 },
                 onOrientationChange = onOrientationChange,
                 onAlwaysOnChanged = onAlwaysOnChanged
+            )
+        }
+        
+        composable(MenuScreen.ABOUT_SCREEN) {
+            AboutScreen(
+                onBackPressed = {
+                    navController.popBackStack()
+                }
             )
         }
     }

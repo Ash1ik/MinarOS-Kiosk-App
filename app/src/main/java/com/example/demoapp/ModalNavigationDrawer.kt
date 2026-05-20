@@ -1,5 +1,6 @@
 package com.example.demoapp
 
+import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -73,33 +74,40 @@ fun DrawerMenuItem(
     }
 }
 
-
 @Composable
 fun TvButton(
     text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier // Added to support FocusRequesters from parent containers easily!
+    onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
     Box(
-        modifier = modifier
-            // 1. First, track focus changes cleanly
+        modifier = Modifier
             .onFocusChanged { isFocused = it.isFocused }
-            // 2. Make the item focusable in the TV layout tree hierarchy
             .focusable()
-            // 3. The built-in .clickable handling auto-maps D-pad Center & Enter perfectly
-            // once focus is established on the item plane.
+            // 🎯 FIXED: Intercept hardware remote presses directly for all your system action buttons
+            .onKeyEvent { keyEvent ->
+                if (isFocused &&
+                    keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                    (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    onClick()
+                    return@onKeyEvent true
+                }
+                false
+            }
             .clickable { onClick() }
             .background(
-                color = if (isFocused) BrandColor else Color.LightGray, // Clean off-white fallback
-                shape = RoundedCornerShape(8.dp)
+                if (isFocused) BrandColor else BrandColor.copy(alpha = 0.15f),
+                RoundedCornerShape(8.dp)
             )
-            .padding(horizontal = 24.dp, vertical = 14.dp)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            color = if (isFocused) Color.White else Color.Black,
+            color = if (isFocused) Color.White else BrandColor,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold
         )
     }

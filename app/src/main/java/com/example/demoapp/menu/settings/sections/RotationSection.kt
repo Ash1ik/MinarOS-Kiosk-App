@@ -2,6 +2,7 @@ package com.example.demoapp.menu.settings.sections
 
 import android.content.Context
 import android.content.pm.ActivityInfo
+import android.view.KeyEvent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -42,6 +43,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.nativeKeyCode
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -78,11 +81,22 @@ fun RotationSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    if (isHeaderFocused) BrandColor.copy(alpha = 0.08f) else Color.Transparent,
+                    if (isHeaderFocused) Color.LightGray else Color.Transparent,
                     RoundedCornerShape(8.dp)
                 )
                 .onFocusChanged { isHeaderFocused = it.isFocused }
                 .focusable()
+                // 🎯 FIX 1: Intercept the hardware D-pad click directly for instant 1-click expansion
+                .onKeyEvent { keyEvent ->
+                    if (isHeaderFocused &&
+                        keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                        (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+                        isExpanded = !isExpanded
+                        return@onKeyEvent true // Event consumed successfully
+                    }
+                    false
+                }
                 .clickable { isExpanded = !isExpanded }
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -119,11 +133,24 @@ fun RotationSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
-                                if (isItemFocused) BrandColor.copy(alpha = 0.15f) else Color.Transparent,
+                                if (isItemFocused) BrandColor.copy(0.25f) else Color.Transparent,
                                 RoundedCornerShape(6.dp)
                             )
                             .onFocusChanged { isItemFocused = it.isFocused }
                             .focusable()
+                            // 🎯 FIX 2: Intercept hardware selection inside the sub-list for single-click confirmation
+                            .onKeyEvent { keyEvent ->
+                                if (isItemFocused &&
+                                    keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                                    (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+                                    pendingRotationFlag = orientationFlag
+                                    pendingRotationLabel = orientationLabel
+                                    showConfirmationDialog = true
+                                    return@onKeyEvent true
+                                }
+                                false
+                            }
                             .clickable {
                                 pendingRotationFlag = orientationFlag
                                 pendingRotationLabel = orientationLabel
@@ -168,7 +195,6 @@ fun RotationSection(
                     color = Color.DarkGray
                 )
             },
-            // FIX: Put your custom spacing Row layout straight into the confirmButton slot parameter!
             confirmButton = {
                 Row(
                     modifier = Modifier
@@ -185,9 +211,7 @@ fun RotationSection(
 
                     Button(
                         onClick = {
-                            // Commit changes to database only
                             sharedPrefs.edit { putInt("SAVED_ORIENTATION", pendingRotationFlag) }
-
                             showConfirmationDialog = false
                             Toast.makeText(context, "Saved successfully! Changes will apply on refresh or restart.", Toast.LENGTH_LONG).show()
                         },

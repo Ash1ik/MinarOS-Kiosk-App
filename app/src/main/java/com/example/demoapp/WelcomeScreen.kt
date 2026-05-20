@@ -3,6 +3,7 @@ package com.example.demoapp
 import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +48,8 @@ fun WelcomeScreen(
 
     var mosqueIdInput by remember { mutableStateOf("") }
     var isInputError by remember { mutableStateOf(false) }
+
+    var isFocused by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -131,7 +135,7 @@ fun WelcomeScreen(
                 },
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = BrandColor,
+                    containerColor = if (isFocused) BrandColor else Color.LightGray,
                     contentColor = Color.White
                 ),
                 modifier = Modifier
@@ -139,10 +143,12 @@ fun WelcomeScreen(
                     .height(56.dp)
                     // 4. ADDED: Attach the focus requester pointer reference link here
                     .focusRequester(saveButtonFocusRequester)
+                    .onFocusChanged { isFocused = it.isFocused }
             ) {
                 Text(
                     text = "Save Display",
                     fontSize = 16.sp,
+                    color = if (isFocused) Color.White else Color.Gray,
                     fontWeight = FontWeight.Bold
                 )
             }

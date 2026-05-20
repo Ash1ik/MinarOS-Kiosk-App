@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.core.content.edit
+import java.io.DataOutputStream
 
 // Clean, isolated routing definitions
 enum class AppLaunchState {
@@ -41,14 +42,18 @@ class MainActivity : ComponentActivity() {
 
         // Using "MinarOSPrefs" to stay consistent with your preference keys across files
         val sharedPrefs = getSharedPreferences("MinarOSPrefs", MODE_PRIVATE)
-        val savedOrientation = sharedPrefs.getInt("SAVED_ORIENTATION", ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+        val savedOrientation =
+            sharedPrefs.getInt("SAVED_ORIENTATION", ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
 
         applySystemAndVisualOrientation(savedOrientation)
 
         if (sharedPrefs.getBoolean("ALWAYS_ON_MODE", true)) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
-        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN
+        )
 
         setContent {
             // App always mounts strictly on the SPLASH branch first
@@ -57,7 +62,13 @@ class MainActivity : ComponentActivity() {
             AnimatedContent(
                 targetState = currentLaunchState,
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(500)).togetherWith(fadeOut(animationSpec = tween(500)))
+                    fadeIn(animationSpec = tween(500)).togetherWith(
+                        fadeOut(
+                            animationSpec = tween(
+                                500
+                            )
+                        )
+                    )
                 },
                 label = "AppLaunchTransition"
             ) { state ->
@@ -92,7 +103,10 @@ class MainActivity : ComponentActivity() {
                             currentOrientation = currentVisualOrientation,
                             internalFlipAngle = internalFlipAngle,
                             onOrientationChange = { orientation ->
+                                // 1. Update your visual tracker tracking properties
                                 applySystemAndVisualOrientation(orientation)
+
+                                // 2. Write configuration parameters to SharedPreferences database maps
                                 sharedPrefs.edit { putInt("SAVED_ORIENTATION", orientation) }
                             },
                             onAlwaysOnChanged = { isEnabled ->
@@ -113,18 +127,22 @@ class MainActivity : ComponentActivity() {
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                 internalFlipAngle = 0f
             }
+
             ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT -> {
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                 internalFlipAngle = 180f
             }
+
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE -> {
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 internalFlipAngle = 0f
             }
+
             ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE -> {
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 internalFlipAngle = 180f
             }
         }
     }
+
 }
