@@ -1,9 +1,12 @@
 package com.example.demoapp
 
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.WindowManager
+import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
@@ -12,7 +15,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.with
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -21,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.core.content.edit
-import java.io.DataOutputStream
 
 // Clean, isolated routing definitions
 enum class AppLaunchState {
@@ -38,7 +39,18 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalAnimationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        android.webkit.WebView.setWebContentsDebuggingEnabled(true)
+
+        // 🎯 CRITICAL FIX: Safe debugging setup wrapper.
+        // Prevents InvocationTargetException when com.google.android.webview is missing on custom TV hardware.
+        try {
+            // Falls back to checking the application context flags instead of a generated class
+            val isDebuggable = (0 != (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE))
+            if (isDebuggable) {
+                WebView.setWebContentsDebuggingEnabled(true)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         // Using "MinarOSPrefs" to stay consistent with your preference keys across files
         val sharedPrefs = getSharedPreferences("MinarOSPrefs", MODE_PRIVATE)
@@ -63,11 +75,7 @@ class MainActivity : ComponentActivity() {
                 targetState = currentLaunchState,
                 transitionSpec = {
                     fadeIn(animationSpec = tween(500)).togetherWith(
-                        fadeOut(
-                            animationSpec = tween(
-                                500
-                            )
-                        )
+                        fadeOut(animationSpec = tween(500))
                     )
                 },
                 label = "AppLaunchTransition"
@@ -89,8 +97,6 @@ class MainActivity : ComponentActivity() {
                     }
 
                     AppLaunchState.WELCOME -> {
-                        // FIXED: Removed the redundant 'isAppConfigured' conditional wrap.
-                        // The state machine only visits this branch if the Mosque ID is genuinely missing.
                         WelcomeScreen(
                             onIdSuccessfullySaved = {
                                 currentLaunchState = AppLaunchState.MAIN_DISPLAY
@@ -144,5 +150,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
 }

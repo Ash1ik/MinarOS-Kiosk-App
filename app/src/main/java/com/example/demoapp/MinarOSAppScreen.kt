@@ -4,13 +4,20 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.view.ViewGroup
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,15 +29,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,6 +62,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -59,6 +71,17 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.example.demoapp.ui.theme.BrandColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+fun checkInternetConnection(context: Context): Boolean {
+    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val capabilities = cm.getNetworkCapabilities(cm.activeNetwork)
+    return capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+}
+
+// 🎯 GLOBAL STATIC WORKSPACE BUFFER LOCK
+// Isolates instance rendering out of local layout composition lifecycles completely
+@SuppressLint("StaticFieldLeak")
+private var persistentSystemWebView: WebView? = null
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled", "ContextCastToActivity")
@@ -71,53 +94,118 @@ fun MinarOsAppScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current as? Activity
+    val context2 = LocalContext.current
     val focusManager = LocalFocusManager.current
     val sharedPrefs = remember { context?.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
 
     val firstItemFocusRequester = remember { FocusRequester() }
+    val retryButtonFocusRequester = remember { FocusRequester() }
 
-    // Read the endpoint from settings
     val savedEndpoint by remember {
         mutableStateOf(sharedPrefs?.getString("TARGET_ENDPOINT", "100001") ?: "100001")
     }
 
-    // 🎯 FIX 1: Wrap the final URL inside remember(savedEndpoint).
-    // This tells Compose to preserve this string across layout re-entries!
     val fullTargetUrl = remember(savedEndpoint) {
         "https://minaros.com/$savedEndpoint"
     }
 
-    // State to track the precise loading percentage of the WebView
     var webViewProgress by remember { mutableIntStateOf(0) }
-
-    // Optimization flag to control initialization constraints
     var isUrlLoaded by remember { mutableStateOf(false) }
+    var isNetworkOnline by remember { mutableStateOf(context?.let { checkInternetConnection(it) } ?: true) }
 
-    // Create and preserve the WebView instance cleanly
-    val webView = remember {
-        WebView(context!!).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            settings.javaScriptEnabled = true
-            webViewClient = WebViewClient()
-            setBackgroundColor(android.graphics.Color.WHITE)
+    // 🎯 WORKSPACE ENGINE MANAGER: Safe abstraction pattern wrapper stops duplicate provider collisions
+    val webView = remember(context) {
+        if (persistentSystemWebView == null) {
+            try {
+                // Initialize context cleanly using Application Context parameters explicitly
+                persistentSystemWebView = WebView(context!!.applicationContext).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    settings.javaScriptEnabled = true
+                    setBackgroundColor(android.graphics.Color.WHITE)
 
-            webChromeClient = object : WebChromeClient() {
-                override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                    webViewProgress = newProgress
+                    webViewClient = object : WebViewClient() {
+                        override fun onReceivedError(
+                            view: WebView?,
+                            request: WebResourceRequest?,
+                            error: WebResourceError?
+                        ) {
+                            super.onReceivedError(view, request, error)
+                            if (request?.isForMainFrame == true) {
+                                webViewProgress = 100
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        } else {
+            // Restore structural values safely if instance is persistent
+            if (!persistentSystemWebView?.url.isNullOrEmpty() && persistentSystemWebView?.url != "about:blank") {
+                webViewProgress = 100
+                isUrlLoaded = true
+            }
+        }
+
+        // Keep the progress updater mapped to the current screen memory scope safely
+        persistentSystemWebView?.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                webViewProgress = newProgress
+            }
+        }
+
+        persistentSystemWebView
+    }
+
+    // Hardware connection state tracking pipeline
+    DisposableEffect(context) {
+        val connectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                scope.launch {
+                    isNetworkOnline = true
+                    context.runOnUiThread {
+                        webView?.let { currentView ->
+                            if (!isUrlLoaded) {
+                                webViewProgress = 0
+                                currentView.loadUrl(fullTargetUrl)
+                                isUrlLoaded = true
+                            } else {
+                                webViewProgress = 100
+                                currentView.reload()
+                            }
+                        }
+                    }
                 }
             }
+
+            override fun onLost(network: Network) {
+                scope.launch { isNetworkOnline = false }
+            }
+        }
+
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        connectivityManager.registerNetworkCallback(request, networkCallback)
+
+        onDispose {
+            try { connectivityManager.unregisterNetworkCallback(networkCallback) } catch (e: Exception) {}
         }
     }
 
-    // 🎯 FIX 2: Check URL loading flag inside initialization hook.
-    // Since fullTargetUrl is now remembered, this block will evaluate as completely idle on return layouts.
-    LaunchedEffect(fullTargetUrl) {
-        if (!isUrlLoaded) {
+    // Cold-boot layout loading hook handles entry logic safely
+    LaunchedEffect(fullTargetUrl, isNetworkOnline) {
+        if (webView != null && !isUrlLoaded && isNetworkOnline) {
+            webViewProgress = 0
             webView.loadUrl(fullTargetUrl)
             isUrlLoaded = true
+        } else if (!isNetworkOnline) {
+            webViewProgress = 100
         }
     }
 
@@ -125,11 +213,10 @@ fun MinarOsAppScreen(
     val exitThreshold = 500L
     val minDelay = 100L
 
-    // Drawer Auto-Focus Logic
-    LaunchedEffect(drawerState.targetValue) {
-        if (drawerState.targetValue == DrawerValue.Open) {
+    LaunchedEffect(drawerState.isOpen) {
+        if (drawerState.isOpen) {
             try { firstItemFocusRequester.requestFocus() } catch (e: Exception) { }
-        } else if (drawerState.targetValue == DrawerValue.Closed) {
+        } else {
             focusManager.clearFocus()
         }
     }
@@ -145,7 +232,7 @@ fun MinarOsAppScreen(
             return@BackHandler
         }
 
-        if (webView.canGoBack()) {
+        if (webView != null && webView.canGoBack()) {
             webView.goBack()
             lastBackPressTime = 0L
             return@BackHandler
@@ -181,8 +268,7 @@ fun MinarOsAppScreen(
                     Image(
                         painter = painterResource(id = R.drawable.ic_minaros_logo_white),
                         contentDescription = "App Logo",
-                        modifier = Modifier.size(120.dp)
-                            .padding(start = 24.dp)
+                        modifier = Modifier.size(120.dp).padding(start = 24.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -195,7 +281,6 @@ fun MinarOsAppScreen(
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // 1. Refresh
                     DrawerMenuItem(
                         title = "Refresh",
                         subtitle = "Refresh the screen",
@@ -205,13 +290,14 @@ fun MinarOsAppScreen(
                         updatedOrientation?.let { onOrientationChange(it) }
                         scope.launch { drawerState.close() }
 
-                        webViewProgress = 0
-                        webView.reload()
+                        if (isNetworkOnline && webView != null) {
+                            webViewProgress = 0
+                            webView.reload()
+                        }
                     }
 
                     HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
 
-                    // 2. Orientation
                     DrawerMenuItem(
                         title = "Rotate Screen",
                         subtitle = "Toggle next orientation",
@@ -232,7 +318,6 @@ fun MinarOsAppScreen(
 
                     HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
 
-                    // 3. Settings
                     DrawerMenuItem(
                         title = "Settings",
                         subtitle = "Change Your Preference",
@@ -271,48 +356,107 @@ fun MinarOsAppScreen(
             contentAlignment = Alignment.Center
         ) {
             // The Primary WebView Surface
-            AndroidView(
-                factory = { webView },
-                update = { view ->
-                    // 🎯 FIX 3: Safe dynamic update comparison.
-                    // Instead of checking string allocations directly, we pull from storage.
-                    // If unchanged, this block remains idle and never forces a reload on back navigation!
-                    val currentStoredEndpoint = sharedPrefs?.getString("TARGET_ENDPOINT", "100001") ?: "100001"
-                    val freshTargetUrl = "https://minaros.com/$currentStoredEndpoint"
+            if (webView != null) {
+                AndroidView(
+                    factory = {
+                        // Clean view detach safely removes dependencies from stale backstack targets
+                        (webView.parent as? ViewGroup)?.removeView(webView)
+                        webView
+                    },
+                    update = { view ->
+                        val currentStoredEndpoint = sharedPrefs?.getString("TARGET_ENDPOINT", "100001") ?: "100001"
+                        val freshTargetUrl = "https://minaros.com/$currentStoredEndpoint"
 
-                    if (view.url != null && view.url != freshTargetUrl && view.url != "$freshTargetUrl/") {
-                        webViewProgress = 0
-                        isUrlLoaded = false
-                        view.loadUrl(freshTargetUrl)
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+                        if (view.url != null && view.url != freshTargetUrl && view.url != "$freshTargetUrl/" && isNetworkOnline) {
+                            webViewProgress = 0
+                            isUrlLoaded = false
+                            view.loadUrl(freshTargetUrl)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-            // Full-screen white curtain layer is displayed only during actual initial loads (< 100)
-            if (webViewProgress < 100) {
+            // Full-screen white curtain loading layer
+            if (webViewProgress < 100 && isNetworkOnline) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.White),
+                    modifier = Modifier.fillMaxSize().background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "Your Mosque Display is Loading...",
                             color = BrandColor,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold
                         )
-
                         Spacer(modifier = Modifier.height(24.dp))
-
                         CircularProgressIndicator(
                             modifier = Modifier.size(64.dp),
                             color = BrandColor,
                             strokeWidth = 5.dp
+                        )
+                    }
+                }
+            }
+
+            // TV-OPTIMIZED OFFLINE ERROR ROW LAYER
+            if (!isNetworkOnline) {
+                LaunchedEffect(Unit) {
+                    delay(100)
+                    try { retryButtonFocusRequester.requestFocus() } catch (e: Exception) {}
+                }
+
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FA)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.width(520.dp).padding(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Warning,
+                            contentDescription = "Offline Error Indicator",
+                            tint = BrandColor,
+                            modifier = Modifier.size(80.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Text(
+                            text = "Connection Lost",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF212529)
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = "Unable to load display layout dashboard. Please verify your physical smart display Ethernet link or local Wi-Fi configuration routing access parameters.",
+                            fontSize = 16.sp,
+                            color = Color(0xFF6C757D),
+                            textAlign = TextAlign.Center,
+                            lineHeight = 24.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        TvButton(
+                            text = "Retry Connection",
+                            modifier = Modifier
+                                .width(220.dp)
+                                .focusRequester(retryButtonFocusRequester),
+                            onClick = {
+                                isNetworkOnline = checkInternetConnection(context2)
+
+                                if (isNetworkOnline && webView != null) {
+                                    webViewProgress = 0
+                                    webView.reload()
+                                }
+                            }
                         )
                     }
                 }
