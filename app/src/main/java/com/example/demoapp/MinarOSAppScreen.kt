@@ -287,13 +287,9 @@ fun MinarOsAppScreen(
                         icon = ImageVector.vectorResource(R.drawable.ic_refresh),
                         modifier = Modifier.focusRequester(firstItemFocusRequester)
                     ) {
+                        webView?.reload()
                         updatedOrientation?.let { onOrientationChange(it) }
                         scope.launch { drawerState.close() }
-
-                        if (isNetworkOnline && webView != null) {
-                            webViewProgress = 0
-                            webView.reload()
-                        }
                     }
 
                     HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
@@ -383,11 +379,14 @@ fun MinarOsAppScreen(
                     modifier = Modifier.fillMaxSize().background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                        ) {
                         Text(
-                            text = "Your Mosque Display is Loading...",
+                            text = "Mosque Display is Loading...",
                             color = BrandColor,
-                            fontSize = 22.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(24.dp))
