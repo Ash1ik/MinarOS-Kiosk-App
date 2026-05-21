@@ -2,6 +2,7 @@ package com.example.demoapp.menu.settings
 
 import android.content.Context
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -27,6 +28,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -77,6 +79,9 @@ fun SettingsScreen(
         mutableIntStateOf(sharedPrefs.getInt("SAVED_ORIENTATION", ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE))
     }
     var isAlwaysOnEnabled by remember { mutableStateOf(sharedPrefs.getBoolean("ALWAYS_ON_MODE", true)) }
+
+    val configuration = LocalConfiguration.current
+    val isTelevision = (configuration.uiMode and Configuration.UI_MODE_TYPE_MASK) == Configuration.UI_MODE_TYPE_TELEVISION
 
     LaunchedEffect(Unit) {
         delay(100)
@@ -135,35 +140,8 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // 🎯 FIXED WRAPPER CONTAINER: Focusable at all times to prevent hardware back-snapping
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(containerBoxFocus)
-                        .focusProperties {
-                            up = backButtonFocus
-                            down = saveButtonFocus
-                        }
-                        .focusable(enabled = true, interactionSource = containerInteractionSource)
-                        .onKeyEvent { keyEvent ->
-                            if (!isEditingMode && isContainerFocused &&
-                                keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
-                                (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-                                        keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)
-                            ) {
-                                isEditingMode = true
-                                // Hand over focus to the inner field before popping open the IME
-                                textFieldFocus.requestFocus()
-                                keyboardController?.show()
-                                return@onKeyEvent true
-                            }
-                            false
-                        }
-                        // 🎯 HOVER COLOR CHANGED: Uses a clean, clear Gray overlay during focus tracking passes
-                        .background(
-                            if (isContainerFocused && !isEditingMode) Color(0xFFE0E0E0) else Color.Transparent,
-                            RoundedCornerShape(12.dp)
-                        )
-                ) {
+                if (!isTelevision) {
+                    // 📱 PHONE MODE: Clean, responsive, standard text field without focus wrappers or locks
                     OutlinedTextField(
                         value = currentEndpoint,
                         onValueChange = { value ->
@@ -172,7 +150,7 @@ fun SettingsScreen(
                             }
                         },
                         singleLine = true,
-                        readOnly = !isEditingMode,
+                        readOnly = false, // Always ready to type instantly on touch tap
                         placeholder = {
                             Text("Enter 6-digit ID", color = Color.Gray.copy(alpha = 0.6f))
                         },
@@ -183,31 +161,102 @@ fun SettingsScreen(
                         ),
                         keyboardActions = KeyboardActions(
                             onDone = {
-                                if (currentEndpoint.length == 6) {
-                                    isEditingMode = false
-                                    keyboardController?.hide()
-                                    saveButtonFocus.requestFocus()
-                                }
+                                keyboardController?.hide()
+                                saveButtonFocus.requestFocus()
                             }
                         ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(textFieldFocus)
-                            .onFocusChanged { focusState ->
-                                if (!focusState.isFocused && !isContainerFocused) {
-                                    isEditingMode = false
-                                }
-                            },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = if (isEditingMode) Color.LightGray.copy(alpha = 0.2f) else Color.Transparent,
+                            focusedContainerColor = Color.LightGray.copy(alpha = 0.2f),
                             unfocusedContainerColor = Color.Transparent,
-                            focusedBorderColor = if (isEditingMode) BrandColor else Color.LightGray,
+                            focusedBorderColor = BrandColor,
                             unfocusedBorderColor = Color.LightGray,
                             focusedTextColor = Color.Black,
                             unfocusedTextColor = Color.DarkGray,
                             errorBorderColor = Color.Red
                         )
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(containerBoxFocus)
+                            .focusProperties {
+                                up = backButtonFocus
+                                down = saveButtonFocus
+                            }
+                            .focusable(
+                                enabled = true,
+                                interactionSource = containerInteractionSource
+                            )
+                            .onKeyEvent { keyEvent ->
+                                if (!isEditingMode && isContainerFocused &&
+                                    keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                                    (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)
+                                ) {
+                                    isEditingMode = true
+                                    // Hand over focus to the inner field before popping open the IME
+                                    textFieldFocus.requestFocus()
+                                    keyboardController?.show()
+                                    return@onKeyEvent true
+                                }
+                                false
+                            }
+                            // 🎯 HOVER COLOR CHANGED: Uses a clean, clear Gray overlay during focus tracking passes
+                            .background(
+                                if (isContainerFocused && !isEditingMode) Color(0xFFE0E0E0) else Color.Transparent,
+                                RoundedCornerShape(12.dp)
+                            )
+                    ) {
+                        OutlinedTextField(
+                            value = currentEndpoint,
+                            onValueChange = { value ->
+                                if (value.length <= 6 && value.all { it.isDigit() }) {
+                                    currentEndpoint = value
+                                }
+                            },
+                            singleLine = true,
+                            readOnly = !isEditingMode,
+                            placeholder = {
+                                Text("Enter 6-digit ID", color = Color.Gray.copy(alpha = 0.6f))
+                            },
+                            isError = currentEndpoint.isNotEmpty() && currentEndpoint.length < 6,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    if (currentEndpoint.length == 6) {
+                                        isEditingMode = false
+                                        keyboardController?.hide()
+                                        saveButtonFocus.requestFocus()
+                                    }
+                                }
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(textFieldFocus)
+                                .onFocusChanged { focusState ->
+                                    if (!focusState.isFocused && !isContainerFocused) {
+                                        isEditingMode = false
+                                    }
+                                },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = if (isEditingMode) Color.LightGray.copy(
+                                    alpha = 0.2f
+                                ) else Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedBorderColor = if (isEditingMode) BrandColor else Color.LightGray,
+                                unfocusedBorderColor = Color.LightGray,
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.DarkGray,
+                                errorBorderColor = Color.Red
+                            )
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
 
