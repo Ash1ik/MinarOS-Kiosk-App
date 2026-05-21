@@ -13,6 +13,8 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -51,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.OutlinedButton
+import androidx.tv.material3.OutlinedButtonDefaults
 import com.example.demoapp.ui.theme.BrandColor
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -203,21 +207,37 @@ fun RotationSection(
                     horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedButton(
-                        onClick = { showConfirmationDialog = false }
+                    val cancelInteraction = remember { MutableInteractionSource() }
+                    val isCancelFocused by cancelInteraction.collectIsFocusedAsState()
+
+                    Button(
+                        onClick = { showConfirmationDialog = false },
+                        interactionSource = cancelInteraction, // 🎯 Binds focus state track
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isCancelFocused) BrandColor else Color.LightGray.copy(alpha = 0.4f),
+                            contentColor = if (isCancelFocused) Color.White else Color.Gray
+                        ),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", fontWeight = FontWeight.SemiBold)
                     }
+
+                    val saveInteraction = remember { MutableInteractionSource() }
+                    val isSaveFocused by saveInteraction.collectIsFocusedAsState()
 
                     Button(
                         onClick = {
                             sharedPrefs.edit { putInt("SAVED_ORIENTATION", pendingRotationFlag) }
                             showConfirmationDialog = false
-                            Toast.makeText(context, "Saved successfully! Changes will apply on refresh or restart.", Toast.LENGTH_LONG).show()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = BrandColor)
+                        interactionSource = saveInteraction, // 🎯 Binds focus state track
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSaveFocused) BrandColor else Color.LightGray.copy(alpha = 0.4f),
+                            contentColor = if (isSaveFocused) Color.White else Color.Gray
+                        ),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Save", color = Color.White)
+                        Text("Save", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
