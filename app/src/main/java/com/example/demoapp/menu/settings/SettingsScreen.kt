@@ -47,11 +47,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.nativeKeyCode
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +78,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
     val scope = rememberCoroutineScope()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     // Focus Requesters
     val backButtonFocus = remember { FocusRequester() }
@@ -86,6 +87,7 @@ fun SettingsScreen(
 
     // Editing state
     var isEditing by remember { mutableStateOf(false) }
+    var isFieldFocused by remember { mutableStateOf(false) }
 
     // State bindings
     var currentEndpoint by remember {
@@ -102,12 +104,11 @@ fun SettingsScreen(
         mutableStateOf(sharedPrefs.getBoolean("ALWAYS_ON_MODE", true))
     }
 
-    // Focus TextField on screen enter
+    // Direct initial layout focus targeting
     LaunchedEffect(Unit) {
-        delay(150)
-        textFieldFocus.requestFocus()
+        delay(100)
+        backButtonFocus.requestFocus()
     }
-
 
     Scaffold(
         topBar = {
@@ -125,6 +126,12 @@ fun SettingsScreen(
                         onClick = { onBackPressed() },
                         modifier = Modifier
                             .padding(start = 8.dp)
+                            .focusRequester(backButtonFocus)
+                            .onFocusChanged { isBackFocused = it.isFocused }
+                            // 🎯 HARDCODED DIRECTION: Forcibly point down arrow directly to the text field!
+                            .focusProperties {
+                                down = textFieldFocus
+                            }
                             .background(
                                 if (isBackFocused) Color.White.copy(alpha = 0.2f) else Color.Transparent,
                                 RoundedCornerShape(8.dp)
@@ -168,17 +175,32 @@ fun SettingsScreen(
                     value = currentEndpoint,
                     onValueChange = { currentEndpoint = it },
                     singleLine = true,
+                    // 🎯 FIX: Turned readOnly off completely so it is always ready to type immediately on focus
+                    readOnly = false,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Done
                     ),
                     keyboardActions = KeyboardActions(
                         onDone = {
-                            textFieldFocus.requestFocus()
+                            keyboardController?.hide()
+                            saveButtonFocus.requestFocus() // Moves focus cleanly down to Save Button when done typing
                         }
                     ),
                     modifier = Modifier
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .focusRequester(textFieldFocus)
+                        .onFocusChanged { focusState ->
+                            isFieldFocused = focusState.isFocused
+                            if (!focusState.isFocused) {
+                                keyboardController?.hide()
+                            }
+                        }
+                        // Force the explicit top-down navigation track path layout bindings
+                        .focusProperties {
+                            up = backButtonFocus
+                            down = saveButtonFocus
+                        },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.LightGray.copy(alpha = 0.3f),
                         unfocusedContainerColor = Color.Transparent,
@@ -189,8 +211,15 @@ fun SettingsScreen(
                     )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
+
                 TvButton(
                     text = "Save Configuration",
+                    modifier = Modifier
+                        .focusRequester(saveButtonFocus)
+                        // 🎯 HARDCODED DIRECTION: Route up directly back to the text field!
+                        .focusProperties {
+                            up = textFieldFocus
+                        },
                     onClick = {
                         sharedPrefs.edit { putString("TARGET_ENDPOINT", currentEndpoint) }
                         Toast.makeText(context, "Mosque id is saving...", Toast.LENGTH_SHORT).show()
@@ -211,7 +240,6 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .onFocusChanged { isCacheRowFocused = it.isFocused }
                         .focusable()
-                        // 🎯 FIXED: Run Toast directly inside the D-pad remote key handler
                         .onKeyEvent { keyEvent ->
                             if (isCacheRowFocused &&
                                 keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
@@ -222,7 +250,6 @@ fun SettingsScreen(
                                 isCacheEnabled = nextState
                                 sharedPrefs.edit { putBoolean("ENABLE_CACHE", nextState) }
 
-                                // Use nextState so the Toast matches the new value instantly
                                 if (nextState) {
                                     Toast.makeText(context, "Web Caching is ENABLED", Toast.LENGTH_SHORT).show()
                                 } else {
@@ -319,6 +346,7 @@ fun SettingsScreen(
         }
     }
 }
+
 @Composable
 fun SectionDivider() {
     Column {

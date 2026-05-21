@@ -77,15 +77,17 @@ fun DrawerMenuItem(
 @Composable
 fun TvButton(
     text: String,
+    modifier: Modifier = Modifier, // Added modifier passing support for flexible control
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .onFocusChanged { isFocused = it.isFocused }
+            // 🎯 CRITICAL FIX: The button container MUST be marked focusable
+            // so it registers D-pad navigation highlights cleanly
             .focusable()
-            // 🎯 FIXED: Intercept hardware remote presses directly for all your system action buttons
             .onKeyEvent { keyEvent ->
                 if (isFocused &&
                     keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
