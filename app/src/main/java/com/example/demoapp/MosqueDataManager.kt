@@ -12,16 +12,15 @@ object MosqueDataManager {
      * Atomically clears previous records and writes the fresh Mosque ID into disk storage.
      */
     fun saveMosqueId(context: Context, newId: String) {
+
         val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         sharedPrefs.edit(commit = true) {
-            // 🎯 Step 1: Force remove any duplicate keys or stale data blocks first
-            remove(KEY_MOSQUE_ID)
+            // 🎯 Step 1: Explicitly purge the previous entry out of memory blocks first
+            remove(getMosqueId(context))
 
-            // Step 2: Inject the clean new user input string value securely
-            if (newId.isNotBlank()) {
-                putString(KEY_MOSQUE_ID, newId.trim())
-            }
+            // Step 2: Write the clean, validated 6-digit configuration entry safely
+            putString(KEY_MOSQUE_ID, newId.trim())
         }
     }
 
@@ -32,6 +31,19 @@ object MosqueDataManager {
     fun getMosqueId(context: Context): String {
         val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return sharedPrefs.getString(KEY_MOSQUE_ID, "") ?: ""
+    }
+
+    /**
+     * Completely purges the saved Mosque ID tracking entry from disk storage.
+     * Resets the application profile state back to factory onboarding configurations.
+     */
+    fun deleteMosqueId(context: Context) {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        sharedPrefs.edit(commit = true) {
+            // 🎯 Atomic removal: Targets the unique key reference and wipes it completely
+            remove(KEY_MOSQUE_ID)
+        }
     }
 
     /**

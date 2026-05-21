@@ -101,17 +101,25 @@ fun MinarOsAppScreen(
     val firstItemFocusRequester = remember { FocusRequester() }
     val retryButtonFocusRequester = remember { FocusRequester() }
 
-    val savedEndpoint by remember {
+    var webViewProgress by remember { mutableIntStateOf(0) }
+    var isUrlLoaded by remember { mutableStateOf(false) }
+    var isNetworkOnline by remember { mutableStateOf(context?.let { checkInternetConnection(it) } ?: true) }
+
+    var savedEndpoint by remember {
         mutableStateOf(MosqueDataManager.getMosqueId(context2))
+    }
+
+    // 2. 🎯 FIX: Automatically re-fetches the latest ID every single time this screen comes into focus
+    LaunchedEffect(Unit) {
+        val freshId = MosqueDataManager.getMosqueId(context2)
+        if (freshId != savedEndpoint) {
+            savedEndpoint = freshId
+        }
     }
 
     val fullTargetUrl = remember(savedEndpoint) {
         "https://minaros.com/$savedEndpoint"
     }
-
-    var webViewProgress by remember { mutableIntStateOf(0) }
-    var isUrlLoaded by remember { mutableStateOf(false) }
-    var isNetworkOnline by remember { mutableStateOf(context?.let { checkInternetConnection(it) } ?: true) }
 
     // 🎯 WORKSPACE ENGINE MANAGER: Safe abstraction pattern wrapper stops duplicate provider collisions
     val webView = remember(context) {
@@ -160,6 +168,16 @@ fun MinarOsAppScreen(
         persistentSystemWebView
     }
 
+    // Cold-boot layout loading hook handles entry logic safely
+    LaunchedEffect(fullTargetUrl, isNetworkOnline) {
+        if (webView != null && isNetworkOnline && fullTargetUrl.isNotEmpty()) {
+            webViewProgress = 0
+            webView.loadUrl(fullTargetUrl)
+        } else if (!isNetworkOnline) {
+            webViewProgress = 100
+        }
+    }
+
     // Hardware connection state tracking pipeline
     DisposableEffect(context) {
         val connectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -195,17 +213,6 @@ fun MinarOsAppScreen(
 
         onDispose {
             try { connectivityManager.unregisterNetworkCallback(networkCallback) } catch (e: Exception) {}
-        }
-    }
-
-    // Cold-boot layout loading hook handles entry logic safely
-    LaunchedEffect(fullTargetUrl, isNetworkOnline) {
-        if (webView != null && !isUrlLoaded && isNetworkOnline) {
-            webViewProgress = 0
-            webView.loadUrl(fullTargetUrl)
-            isUrlLoaded = true
-        } else if (!isNetworkOnline) {
-            webViewProgress = 100
         }
     }
 
@@ -360,12 +367,24 @@ fun MinarOsAppScreen(
                         webView
                     },
                     update = { view ->
-                        val currentStoredEndpoint = sharedPrefs?.getString("TARGET_ENDPOINT", "100001") ?: "100001"
+                        val currentStoredEndpoint = MosqueDataManager.getMosqueId(context2)
                         val freshTargetUrl = "https://minaros.com/$currentStoredEndpoint"
 
                         if (view.url != null && view.url != freshTargetUrl && view.url != "$freshTargetUrl/" && isNetworkOnline) {
                             webViewProgress = 0
                             isUrlLoaded = false
+
+                            // 🎯 THE FIX: Attach a dynamic lifecycle listener to intercept completion passes
+                            view.webViewClient = object : android.webkit.WebViewClient() {
+                                override fun onPageFinished(pageView: android.webkit.WebView?, url: String?) {
+                                    super.onPageFinished(pageView, url)
+
+                                    // 🚀 Flush previous navigation routes out of memory sectors safely
+                                    // only after the current destination has stabilized!
+                                    pageView?.clearHistory()
+                                }
+                            }
+
                             view.loadUrl(freshTargetUrl)
                         }
                     },

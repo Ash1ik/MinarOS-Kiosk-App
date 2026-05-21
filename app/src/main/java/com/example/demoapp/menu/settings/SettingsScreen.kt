@@ -230,6 +230,17 @@ fun SettingsScreen(
 
                 SectionDivider()
 
+                // 3. Screen Rotation Section
+                RotationSection(
+                    selectedRotation = selectedRotation,
+                    onRotationSelected = {
+                        selectedRotation = it
+                        onOrientationChange(selectedRotation)
+                    },
+                )
+
+                SectionDivider()
+
                 // 2. Web Caching Setting
                 Text(
                     "Web Caching",
@@ -285,17 +296,6 @@ fun SettingsScreen(
                         )
                     )
                 }
-
-                SectionDivider()
-
-                // 3. Screen Rotation Section
-                RotationSection(
-                    selectedRotation = selectedRotation,
-                    onRotationSelected = {
-                        selectedRotation = it
-                        onOrientationChange(selectedRotation)
-                    },
-                )
 
                 SectionDivider()
 
