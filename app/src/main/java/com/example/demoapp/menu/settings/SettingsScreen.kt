@@ -60,6 +60,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
+import com.example.demoapp.MosqueDataManager
 import com.example.demoapp.TvButton
 import com.example.demoapp.menu.settings.sections.ConstraintsSection
 import com.example.demoapp.menu.settings.sections.RotationSection
@@ -67,6 +68,7 @@ import com.example.demoapp.menu.settings.sections.StorageSection
 import com.example.demoapp.ui.theme.BrandColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.text.isDigit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,7 +78,8 @@ fun SettingsScreen(
     onAlwaysOnChanged: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
-    val sharedPrefs = remember { context.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
+    val sharedPrefs =
+        remember { context.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -91,7 +94,7 @@ fun SettingsScreen(
 
     // State bindings
     var currentEndpoint by remember {
-        mutableStateOf(sharedPrefs.getString("TARGET_ENDPOINT", "100001") ?: "100001")
+        mutableStateOf(MosqueDataManager.getMosqueId(context))
     }
     var isCacheEnabled by remember { mutableStateOf(sharedPrefs.getBoolean("ENABLE_CACHE", false)) }
     var updateStatus by remember { mutableStateOf("App is up to date (v1.0)") }
@@ -171,45 +174,60 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = currentEndpoint,
-                    onValueChange = { currentEndpoint = it },
-                    singleLine = true,
-                    // 🎯 FIX: Turned readOnly off completely so it is always ready to type immediately on focus
-                    readOnly = false,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            keyboardController?.hide()
-                            saveButtonFocus.requestFocus() // Moves focus cleanly down to Save Button when done typing
-                        }
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(textFieldFocus)
-                        .onFocusChanged { focusState ->
-                            isFieldFocused = focusState.isFocused
-                            if (!focusState.isFocused) {
-                                keyboardController?.hide()
+                currentEndpoint.let { endpointValue ->
+                    OutlinedTextField(
+                        value = endpointValue,
+                        onValueChange = { value ->
+                            // 🎯 FIX 1: Use 'value' instead of 'it' so characters actually get written to state
+                            // Limits input box strictly to numbers up to 6 digits maximum
+                            if (value.length <= 6 && value.all { it.isDigit() }) {
+                                currentEndpoint = value
                             }
-                        }
-                        // Force the explicit top-down navigation track path layout bindings
-                        .focusProperties {
-                            up = backButtonFocus
-                            down = saveButtonFocus
                         },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.LightGray.copy(alpha = 0.3f),
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedBorderColor = BrandColor,
-                        unfocusedBorderColor = Color.LightGray,
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.DarkGray
+                        singleLine = true,
+                        readOnly = false,
+                        placeholder = {
+                            Text("Enter 6-digit ID", color = Color.Gray.copy(alpha = 0.6f))
+                        },
+                        // 🎯 FIX 2: Dynamically flags an error border if the user stops typing before hitting 6 digits
+                        isError = endpointValue.isNotEmpty() && endpointValue.length < 6,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                // Only allow moving forward if the validation constraint is perfectly satisfied
+                                if (endpointValue.length == 6) {
+                                    keyboardController?.hide()
+                                    saveButtonFocus.requestFocus()
+                                }
+                            }
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(textFieldFocus)
+                            .onFocusChanged { focusState ->
+                                isFieldFocused = focusState.isFocused
+                                if (!focusState.isFocused) {
+                                    keyboardController?.hide()
+                                }
+                            }
+                            .focusProperties {
+                                up = backButtonFocus
+                                down = saveButtonFocus
+                            },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.LightGray.copy(alpha = 0.3f),
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedBorderColor = BrandColor,
+                            unfocusedBorderColor = Color.LightGray,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.DarkGray,
+                            errorBorderColor = Color.Red
+                        )
                     )
-                )
+                }
                 Spacer(modifier = Modifier.height(12.dp))
 
                 TvButton(
@@ -229,7 +247,12 @@ fun SettingsScreen(
                 SectionDivider()
 
                 // 2. Web Caching Setting
-                Text("Web Caching", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = BrandColor)
+                Text(
+                    "Web Caching",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BrandColor
+                )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 var isCacheRowFocused by remember { mutableStateOf(false) }
@@ -244,16 +267,25 @@ fun SettingsScreen(
                             if (isCacheRowFocused &&
                                 keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
                                 (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-                                        keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
+                                        keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)
+                            ) {
 
                                 val nextState = !isCacheEnabled
                                 isCacheEnabled = nextState
                                 sharedPrefs.edit { putBoolean("ENABLE_CACHE", nextState) }
 
                                 if (nextState) {
-                                    Toast.makeText(context, "Web Caching is ENABLED", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Web Caching is ENABLED",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 } else {
-                                    Toast.makeText(context, "Web Caching is DISABLED", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Web Caching is DISABLED",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                                 return@onKeyEvent true
                             }
@@ -265,9 +297,17 @@ fun SettingsScreen(
                             sharedPrefs.edit { putBoolean("ENABLE_CACHE", nextState) }
 
                             if (nextState) {
-                                Toast.makeText(context, "Web Caching is ENABLED", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "Web Caching is ENABLED",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             } else {
-                                Toast.makeText(context, "Web Caching is DISABLED", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "Web Caching is DISABLED",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
                         .background(

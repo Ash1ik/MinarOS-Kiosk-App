@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.core.content.edit
 
@@ -85,9 +86,9 @@ class MainActivity : ComponentActivity() {
                         CustomSplashScreen(
                             onSplashFinished = {
                                 // Splash timer ended. Look up the persistent ID to route the user safely.
-                                val savedMosqueId = sharedPrefs.getString("MOSQUE_ID", null)
+                                val savedMosqueId = MosqueDataManager.getMosqueId(context = this@MainActivity)
 
-                                currentLaunchState = if (savedMosqueId.isNullOrEmpty()) {
+                                currentLaunchState = if (savedMosqueId.isEmpty()) {
                                     AppLaunchState.WELCOME
                                 } else {
                                     AppLaunchState.MAIN_DISPLAY

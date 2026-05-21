@@ -1,9 +1,9 @@
 package com.example.demoapp
 
-import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -14,13 +14,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -31,7 +29,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.edit
 import com.example.demoapp.ui.theme.BrandColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,16 +37,15 @@ fun WelcomeScreen(
     onIdSuccessfullySaved: () -> Unit
 ) {
     val context = LocalContext.current
-    val sharedPrefs = remember { context.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
-
-    // 1. ADDED: Focus management controllers for the TV D-pad channel routing
     val focusManager = LocalFocusManager.current
     val saveButtonFocusRequester = remember { FocusRequester() }
 
     var mosqueIdInput by remember { mutableStateOf("") }
     var isInputError by remember { mutableStateOf(false) }
 
-    var isFocused by remember { mutableStateOf(false) }
+    // 🎯 TV FOCUS TRACKER: Reads hardware remote navigation state events cleanly
+    val buttonInteractionSource = remember { MutableInteractionSource() }
+    val isButtonFocused by buttonInteractionSource.collectIsFocusedAsState()
 
     Box(
         modifier = Modifier
@@ -93,13 +89,10 @@ fun WelcomeScreen(
                 },
                 singleLine = true,
                 isError = isInputError,
-                // 2. FIXED: Configure the software keyboard to show a "Done" confirmation button
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
                     imeAction = ImeAction.Done
                 ),
-                // 3. FIXED: When the user presses "Done" on the on-screen keyboard,
-                // instantly force focus onto the save display button!
                 keyboardActions = KeyboardActions(
                     onDone = {
                         saveButtonFocusRequester.requestFocus()
@@ -122,33 +115,29 @@ fun WelcomeScreen(
             Button(
                 onClick = {
                     if (mosqueIdInput.length == 6) {
-                        // Clear keyboard focus cleanly before migrating screens
                         focusManager.clearFocus()
-
-                        sharedPrefs.edit {
-                            putString("MOSQUE_ID", mosqueIdInput)
-                        }
+                        MosqueDataManager.saveMosqueId(context, mosqueIdInput)
                         onIdSuccessfullySaved()
                     } else {
                         isInputError = true
                     }
                 },
+                // 🎯 Pass our custom hardware interaction stream right here
+                interactionSource = buttonInteractionSource,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isFocused) BrandColor else Color.LightGray,
-                    contentColor = Color.White
+                    // Dynamically swaps backdrops and inner texts based on D-pad highlight rules
+                    containerColor = if (isButtonFocused) BrandColor else Color.LightGray.copy(alpha = 0.4f),
+                    contentColor = if (isButtonFocused) Color.White else Color.Gray
                 ),
                 modifier = Modifier
                     .fillMaxWidth(0.5f)
                     .height(56.dp)
-                    // 4. ADDED: Attach the focus requester pointer reference link here
                     .focusRequester(saveButtonFocusRequester)
-                    .onFocusChanged { isFocused = it.isFocused }
             ) {
                 Text(
                     text = "Save Display",
                     fontSize = 16.sp,
-                    color = if (isFocused) Color.White else Color.Gray,
                     fontWeight = FontWeight.Bold
                 )
             }

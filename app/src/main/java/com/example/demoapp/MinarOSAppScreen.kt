@@ -102,7 +102,7 @@ fun MinarOsAppScreen(
     val retryButtonFocusRequester = remember { FocusRequester() }
 
     val savedEndpoint by remember {
-        mutableStateOf(sharedPrefs?.getString("TARGET_ENDPOINT", "100001") ?: "100001")
+        mutableStateOf(MosqueDataManager.getMosqueId(context2))
     }
 
     val fullTargetUrl = remember(savedEndpoint) {
