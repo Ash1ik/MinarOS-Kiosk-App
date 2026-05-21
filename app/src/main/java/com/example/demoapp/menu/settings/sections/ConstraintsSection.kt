@@ -89,7 +89,7 @@ fun ConstraintsSection(
         Text(
             text = if (isAlwaysOnEnabled) "Keep Screen Wake Lock ACTIVE" else "Screen Wake Lock INACTIVE",
             color = Color.DarkGray,
-            fontSize = 16.sp
+            fontSize = 14.sp
         )
         Switch(
             checked = isAlwaysOnEnabled, // 🛠️ FIXED syntax error assignment hole here

@@ -3,6 +3,7 @@ package com.example.demoapp.menu.about
 import android.view.KeyEvent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,9 +38,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.example.demoapp.R
 import com.example.demoapp.ui.theme.BrandColor
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +55,10 @@ fun AboutScreen(
     onBackPressed: () -> Unit
 ) {
     val backButtonFocus = remember { FocusRequester() }
+    val contentScrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+
+    var isContentFocused by remember { mutableStateOf(false) }
 
     // Enforce initial D-pad focus onto the navigation back button immediately upon display entry
     LaunchedEffect(Unit) {
@@ -103,21 +109,50 @@ fun AboutScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color.White) // Matches image clean background look
-                .verticalScroll(rememberScrollState()),
+                .background(Color.White)
+                .verticalScroll(contentScrollState),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Column(
                 modifier = Modifier
-                    .width(760.dp) // Optimized width to keep paragraphs scannable on vast TV aspect ratios
-                    .padding(horizontal = 40.dp, vertical = 24.dp),
+                    .width(760.dp)
+                    .padding(horizontal = 40.dp, vertical = 24.dp)
+                    .onFocusChanged { isContentFocused = it.isFocused }
+                    .focusable()
+                    // 🎯 HARDWARE D-PAD SCROLL INTERCEPTOR:
+                    // Manually animate the ScrollState up or down on hardware button ticks!
+                    .onKeyEvent { keyEvent ->
+                        if (isContentFocused && keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                            when (keyEvent.nativeKeyEvent.keyCode) {
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    coroutineScope.launch {
+                                        // Scroll down by 60dp smoothly per press tick
+                                        contentScrollState.animateScrollTo(contentScrollState.value + 60)
+                                    }
+                                    return@onKeyEvent true // Consume the D-pad click event cleanly
+                                }
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    coroutineScope.launch {
+                                        // Scroll up safely. If we hit the absolute top, move focus back to the header back arrow!
+                                        if (contentScrollState.value == 0) {
+                                            backButtonFocus.requestFocus()
+                                        } else {
+                                            contentScrollState.animateScrollTo(contentScrollState.value - 60)
+                                        }
+                                    }
+                                    return@onKeyEvent true
+                                }
+                            }
+                        }
+                        false
+                    },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 // --- Brand Identity Illustration (Logo) ---
                 Image(
-                    painter = painterResource(id = R.drawable.ic_minaros_logo), // Make sure your color version logo resides here
+                    painter = painterResource(id = R.drawable.ic_minaros_logo),
                     contentDescription = "MinarOS Official Logo Profile",
                     modifier = Modifier.size(width = 280.dp, height = 140.dp)
                 )
@@ -154,7 +189,7 @@ fun AboutScreen(
                     text = "contact@minaros.com",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF1A80A), // Matches your dynamic golden orange accent color precisely
+                    color = Color(0xFFF1A80A),
                     textAlign = TextAlign.Center
                 )
 

@@ -279,7 +279,7 @@ fun SettingsScreen(
                     Text(
                         text = if (isCacheEnabled) "Web Caching is ENABLED" else "Web Caching is DISABLED",
                         color = Color.DarkGray,
-                        fontSize = 16.sp
+                        fontSize = 14.sp
                     )
                     Switch(
                         checked = isCacheEnabled,
