@@ -383,17 +383,17 @@ fun MinarOsAppScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                         ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(64.dp),
+                            color = BrandColor,
+                            strokeWidth = 5.dp
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
                         Text(
                             text = "Mosque Display is Loading...",
                             color = BrandColor,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(64.dp),
-                            color = BrandColor,
-                            strokeWidth = 5.dp
                         )
                     }
                 }
