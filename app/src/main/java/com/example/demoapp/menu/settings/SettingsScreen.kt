@@ -7,16 +7,9 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -24,26 +17,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -68,7 +43,6 @@ import com.example.demoapp.menu.settings.sections.StorageSection
 import com.example.demoapp.ui.theme.BrandColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.text.isDigit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,36 +52,32 @@ fun SettingsScreen(
     onAlwaysOnChanged: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
-    val sharedPrefs =
-        remember { context.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
+    val sharedPrefs = remember { context.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
 
     // Focus Requesters
     val backButtonFocus = remember { FocusRequester() }
+    val containerBoxFocus = remember { FocusRequester() }
     val textFieldFocus = remember { FocusRequester() }
     val saveButtonFocus = remember { FocusRequester() }
 
-    // Editing state
-    var isEditing by remember { mutableStateOf(false) }
-    var isFieldFocused by remember { mutableStateOf(false) }
+    // Intercept states
+    var isEditingMode by remember { mutableStateOf(false) }
+
+    // Interaction sources to listen to baseline TV focus state events
+    val containerInteractionSource = remember { MutableInteractionSource() }
+    val isContainerFocused by containerInteractionSource.collectIsFocusedAsState()
 
     // State bindings
-    var currentEndpoint by remember {
-        mutableStateOf(MosqueDataManager.getMosqueId(context))
-    }
+    var currentEndpoint by remember { mutableStateOf(MosqueDataManager.getMosqueId(context)) }
     var isCacheEnabled by remember { mutableStateOf(sharedPrefs.getBoolean("ENABLE_CACHE", false)) }
     var updateStatus by remember { mutableStateOf("App is up to date (v1.0)") }
     var selectedRotation by remember {
-        mutableIntStateOf(
-            sharedPrefs.getInt("SAVED_ORIENTATION", ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
-        )
+        mutableIntStateOf(sharedPrefs.getInt("SAVED_ORIENTATION", ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE))
     }
-    var isAlwaysOnEnabled by remember {
-        mutableStateOf(sharedPrefs.getBoolean("ALWAYS_ON_MODE", true))
-    }
+    var isAlwaysOnEnabled by remember { mutableStateOf(sharedPrefs.getBoolean("ALWAYS_ON_MODE", true)) }
 
-    // Direct initial layout focus targeting
     LaunchedEffect(Unit) {
         delay(100)
         backButtonFocus.requestFocus()
@@ -116,13 +86,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "MinarOS Settings",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text(text = "MinarOS Settings", fontSize = 22.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     var isBackFocused by remember { mutableStateOf(false) }
                     IconButton(
@@ -131,10 +95,7 @@ fun SettingsScreen(
                             .padding(start = 8.dp)
                             .focusRequester(backButtonFocus)
                             .onFocusChanged { isBackFocused = it.isFocused }
-                            // 🎯 HARDCODED DIRECTION: Forcibly point down arrow directly to the text field!
-                            .focusProperties {
-                                down = textFieldFocus
-                            }
+                            .focusProperties { down = containerBoxFocus }
                             .background(
                                 if (isBackFocused) Color.White.copy(alpha = 0.2f) else Color.Transparent,
                                 RoundedCornerShape(8.dp)
@@ -165,7 +126,6 @@ fun SettingsScreen(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
 
-                // 1. Mosque ID Selection
                 Text(
                     text = "Mosque ID",
                     fontSize = 18.sp,
@@ -174,31 +134,57 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                currentEndpoint.let { endpointValue ->
+                // 🎯 FIXED WRAPPER CONTAINER: Focusable at all times to prevent hardware back-snapping
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(containerBoxFocus)
+                        .focusProperties {
+                            up = backButtonFocus
+                            down = saveButtonFocus
+                        }
+                        .focusable(enabled = true, interactionSource = containerInteractionSource)
+                        .onKeyEvent { keyEvent ->
+                            if (!isEditingMode && isContainerFocused &&
+                                keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                                (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                                        keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)
+                            ) {
+                                isEditingMode = true
+                                // Hand over focus to the inner field before popping open the IME
+                                textFieldFocus.requestFocus()
+                                keyboardController?.show()
+                                return@onKeyEvent true
+                            }
+                            false
+                        }
+                        // 🎯 HOVER COLOR CHANGED: Uses a clean, clear Gray overlay during focus tracking passes
+                        .background(
+                            if (isContainerFocused && !isEditingMode) Color(0xFFE0E0E0) else Color.Transparent,
+                            RoundedCornerShape(12.dp)
+                        )
+                ) {
                     OutlinedTextField(
-                        value = endpointValue,
+                        value = currentEndpoint,
                         onValueChange = { value ->
-                            // 🎯 FIX 1: Use 'value' instead of 'it' so characters actually get written to state
-                            // Limits input box strictly to numbers up to 6 digits maximum
                             if (value.length <= 6 && value.all { it.isDigit() }) {
                                 currentEndpoint = value
                             }
                         },
                         singleLine = true,
-                        readOnly = false,
+                        readOnly = !isEditingMode,
                         placeholder = {
                             Text("Enter 6-digit ID", color = Color.Gray.copy(alpha = 0.6f))
                         },
-                        // 🎯 FIX 2: Dynamically flags an error border if the user stops typing before hitting 6 digits
-                        isError = endpointValue.isNotEmpty() && endpointValue.length < 6,
+                        isError = currentEndpoint.isNotEmpty() && currentEndpoint.length < 6,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
                             imeAction = ImeAction.Done
                         ),
                         keyboardActions = KeyboardActions(
                             onDone = {
-                                // Only allow moving forward if the validation constraint is perfectly satisfied
-                                if (endpointValue.length == 6) {
+                                if (currentEndpoint.length == 6) {
+                                    isEditingMode = false
                                     keyboardController?.hide()
                                     saveButtonFocus.requestFocus()
                                 }
@@ -208,19 +194,14 @@ fun SettingsScreen(
                             .fillMaxWidth()
                             .focusRequester(textFieldFocus)
                             .onFocusChanged { focusState ->
-                                isFieldFocused = focusState.isFocused
-                                if (!focusState.isFocused) {
-                                    keyboardController?.hide()
+                                if (!focusState.isFocused && !isContainerFocused) {
+                                    isEditingMode = false
                                 }
-                            }
-                            .focusProperties {
-                                up = backButtonFocus
-                                down = saveButtonFocus
                             },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.LightGray.copy(alpha = 0.3f),
+                            focusedContainerColor = if (isEditingMode) Color.LightGray.copy(alpha = 0.2f) else Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
-                            focusedBorderColor = BrandColor,
+                            focusedBorderColor = if (isEditingMode) BrandColor else Color.LightGray,
                             unfocusedBorderColor = Color.LightGray,
                             focusedTextColor = Color.Black,
                             unfocusedTextColor = Color.DarkGray,
@@ -234,13 +215,16 @@ fun SettingsScreen(
                     text = "Save Configuration",
                     modifier = Modifier
                         .focusRequester(saveButtonFocus)
-                        // 🎯 HARDCODED DIRECTION: Route up directly back to the text field!
                         .focusProperties {
-                            up = textFieldFocus
+                            up = containerBoxFocus
                         },
                     onClick = {
-                        sharedPrefs.edit { putString("TARGET_ENDPOINT", currentEndpoint) }
-                        Toast.makeText(context, "Mosque id is saving...", Toast.LENGTH_SHORT).show()
+                        if (currentEndpoint.length == 6) {
+                            MosqueDataManager.saveMosqueId(context, currentEndpoint)
+                            Toast.makeText(context, "Saved successfully!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Error: Must be exactly 6 digits.", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 )
 
@@ -269,24 +253,9 @@ fun SettingsScreen(
                                 (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
                                         keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)
                             ) {
-
                                 val nextState = !isCacheEnabled
                                 isCacheEnabled = nextState
                                 sharedPrefs.edit { putBoolean("ENABLE_CACHE", nextState) }
-
-                                if (nextState) {
-                                    Toast.makeText(
-                                        context,
-                                        "Web Caching is ENABLED",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                } else {
-                                    Toast.makeText(
-                                        context,
-                                        "Web Caching is DISABLED",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
                                 return@onKeyEvent true
                             }
                             false
@@ -295,23 +264,9 @@ fun SettingsScreen(
                             val nextState = !isCacheEnabled
                             isCacheEnabled = nextState
                             sharedPrefs.edit { putBoolean("ENABLE_CACHE", nextState) }
-
-                            if (nextState) {
-                                Toast.makeText(
-                                    context,
-                                    "Web Caching is ENABLED",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "Web Caching is DISABLED",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
                         }
                         .background(
-                            if (isCacheRowFocused) Color.LightGray else Color.Transparent,
+                            if (isCacheRowFocused) Color.LightGray.copy(alpha = 0.3f) else Color.Transparent,
                             RoundedCornerShape(8.dp)
                         )
                         .padding(12.dp)
@@ -386,7 +341,6 @@ fun SettingsScreen(
         }
     }
 }
-
 @Composable
 fun SectionDivider() {
     Column {
