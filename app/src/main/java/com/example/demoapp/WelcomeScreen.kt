@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -46,6 +47,8 @@ fun WelcomeScreen(
     // 🎯 TV FOCUS TRACKER: Reads hardware remote navigation state events cleanly
     val buttonInteractionSource = remember { MutableInteractionSource() }
     val isButtonFocused by buttonInteractionSource.collectIsFocusedAsState()
+
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Box(
         modifier = Modifier
@@ -95,6 +98,7 @@ fun WelcomeScreen(
                 ),
                 keyboardActions = KeyboardActions(
                     onDone = {
+                        keyboardController?.hide()
                         saveButtonFocusRequester.requestFocus()
                     }
                 ),
