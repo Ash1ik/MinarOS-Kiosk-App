@@ -1,11 +1,11 @@
-package com.example.demoapp
+package com.example.minaros
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.demoapp.menu.about.AboutScreen
-import com.example.demoapp.menu.settings.SettingsScreen
+import com.example.minaros.menu.about.AboutScreen
+import com.example.minaros.menu.settings.SettingsScreen
 
 
 object MenuScreen {

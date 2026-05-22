@@ -1,4 +1,4 @@
-package com.example.demoapp.menu.about
+package com.example.minaros.menu.about
 
 import android.view.KeyEvent
 import androidx.compose.foundation.Image
@@ -44,8 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.demoapp.R
-import com.example.demoapp.ui.theme.BrandColor
+import com.example.minaros.R
+import com.example.minaros.ui.theme.BrandColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

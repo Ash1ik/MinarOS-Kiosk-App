@@ -1,4 +1,4 @@
-package com.example.demoapp
+package com.example.minaros
 
 import android.content.pm.ActivityInfo
 import android.os.Bundle

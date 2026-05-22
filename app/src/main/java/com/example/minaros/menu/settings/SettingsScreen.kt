@@ -1,4 +1,4 @@
-package com.example.demoapp.menu.settings
+package com.example.minaros.menu.settings
 
 import android.content.Context
 import android.content.pm.ActivityInfo
@@ -37,12 +37,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
-import com.example.demoapp.MosqueDataManager
-import com.example.demoapp.TvButton
-import com.example.demoapp.menu.settings.sections.ConstraintsSection
-import com.example.demoapp.menu.settings.sections.RotationSection
-import com.example.demoapp.menu.settings.sections.StorageSection
-import com.example.demoapp.ui.theme.BrandColor
+import com.example.minaros.MosqueDataManager
+import com.example.minaros.TvButton
+import com.example.minaros.menu.settings.sections.ConstraintsSection
+import com.example.minaros.menu.settings.sections.RotationSection
+import com.example.minaros.menu.settings.sections.StorageSection
+import com.example.minaros.ui.theme.BrandColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

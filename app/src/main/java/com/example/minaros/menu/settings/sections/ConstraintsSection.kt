@@ -1,4 +1,4 @@
-package com.example.demoapp.menu.settings.sections
+package com.example.minaros.menu.settings.sections
 
 import android.view.KeyEvent
 import android.widget.Toast
@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,7 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.demoapp.ui.theme.BrandColor
+import com.example.minaros.ui.theme.BrandColor
 
 @Composable
 fun ConstraintsSection(

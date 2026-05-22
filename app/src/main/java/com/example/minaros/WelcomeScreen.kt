@@ -1,4 +1,4 @@
-package com.example.demoapp
+package com.example.minaros
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -30,7 +30,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.demoapp.ui.theme.BrandColor
+import com.example.minaros.ui.theme.BrandColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -1,4 +1,4 @@
-package com.example.demoapp.ui.theme
+package com.example.minaros.ui.theme
 
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily

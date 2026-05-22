@@ -1,4 +1,4 @@
-package com.example.demoapp
+package com.example.minaros
 
 import android.view.KeyEvent
 import androidx.compose.foundation.background
@@ -29,7 +29,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.demoapp.ui.theme.BrandColor
+import com.example.minaros.ui.theme.BrandColor
 
 @Composable
 fun DrawerMenuItem(

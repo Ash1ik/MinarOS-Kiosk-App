@@ -1,4 +1,4 @@
-package com.example.demoapp
+package com.example.minaros
 
 import android.content.BroadcastReceiver
 import android.content.Context

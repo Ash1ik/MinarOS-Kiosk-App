@@ -1,4 +1,4 @@
-package com.example.demoapp.menu.settings.sections
+package com.example.minaros.menu.settings.sections
 
 import android.webkit.WebView
 import android.widget.Toast
@@ -13,8 +13,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.demoapp.TvButton
-import com.example.demoapp.ui.theme.BrandColor
+import com.example.minaros.TvButton
+import com.example.minaros.ui.theme.BrandColor
 
 @Composable
 fun StorageSection() {

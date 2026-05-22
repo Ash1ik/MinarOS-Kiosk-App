@@ -1,4 +1,4 @@
-package com.example.demoapp
+package com.example.minaros
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
