@@ -3,12 +3,14 @@ package com.example.demoapp
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.view.ViewGroup
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebChromeClient
@@ -71,6 +73,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.example.demoapp.ui.theme.BrandColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.core.content.edit
 
 fun checkInternetConnection(context: Context): Boolean {
     val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -96,14 +99,17 @@ fun MinarOsAppScreen(
     val context = LocalContext.current as? Activity
     val context2 = LocalContext.current
     val focusManager = LocalFocusManager.current
-    val sharedPrefs = remember { context?.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
+    val sharedPrefs =
+        remember { context?.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE) }
 
     val firstItemFocusRequester = remember { FocusRequester() }
     val retryButtonFocusRequester = remember { FocusRequester() }
 
     var webViewProgress by remember { mutableIntStateOf(0) }
     var isUrlLoaded by remember { mutableStateOf(false) }
-    var isNetworkOnline by remember { mutableStateOf(context?.let { checkInternetConnection(it) } ?: true) }
+    var isNetworkOnline by remember {
+        mutableStateOf(context?.let { checkInternetConnection(it) } ?: true)
+    }
 
     var savedEndpoint by remember {
         mutableStateOf(MosqueDataManager.getMosqueId(context2))
@@ -122,18 +128,23 @@ fun MinarOsAppScreen(
     }
 
     // 🎯 WORKSPACE ENGINE MANAGER: Safe abstraction pattern wrapper stops duplicate provider collisions
+    // 🎯 UPDATE YOUR LOGIC BLOCK TO MATCH THIS EXACT SPECIFICATION:
     val webView = remember(context) {
         if (persistentSystemWebView == null) {
             try {
-                // Initialize context cleanly using Application Context parameters explicitly
                 persistentSystemWebView = WebView(context!!.applicationContext).apply {
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
+
+                    // 🚀 ENABLE STANDARD HTML5 OFFLINE ENGINE COMPONENTS
                     settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.databaseEnabled = true
+                    settings.domStorageEnabled =
+                        true    // Allows modern JavaScript apps to write data to disk database slots
+                    settings.databaseEnabled =
+                        true      // Keeps database schemas persistent across restarts
+
                     setBackgroundColor(android.graphics.Color.WHITE)
 
                     webViewClient = object : WebViewClient() {
@@ -153,14 +164,12 @@ fun MinarOsAppScreen(
                 e.printStackTrace()
             }
         } else {
-            // Restore structural values safely if instance is persistent
             if (!persistentSystemWebView?.url.isNullOrEmpty() && persistentSystemWebView?.url != "about:blank") {
                 webViewProgress = 100
                 isUrlLoaded = true
             }
         }
 
-        // Keep the progress updater mapped to the current screen memory scope safely
         persistentSystemWebView?.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 webViewProgress = newProgress
@@ -182,7 +191,8 @@ fun MinarOsAppScreen(
 
     // Hardware connection state tracking pipeline
     DisposableEffect(context) {
-        val connectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager =
+            context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
         val networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
@@ -214,7 +224,10 @@ fun MinarOsAppScreen(
         connectivityManager.registerNetworkCallback(request, networkCallback)
 
         onDispose {
-            try { connectivityManager.unregisterNetworkCallback(networkCallback) } catch (e: Exception) {}
+            try {
+                connectivityManager.unregisterNetworkCallback(networkCallback)
+            } catch (e: Exception) {
+            }
         }
     }
 
@@ -224,7 +237,10 @@ fun MinarOsAppScreen(
 
     LaunchedEffect(drawerState.isOpen) {
         if (drawerState.isOpen) {
-            try { firstItemFocusRequester.requestFocus() } catch (e: Exception) { }
+            try {
+                firstItemFocusRequester.requestFocus()
+            } catch (e: Exception) {
+            }
         } else {
             focusManager.clearFocus()
         }
@@ -255,7 +271,8 @@ fun MinarOsAppScreen(
         }
     }
 
-    val updatedOrientation = sharedPrefs?.getInt("SAVED_ORIENTATION", ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+    val updatedOrientation =
+        sharedPrefs?.getInt("SAVED_ORIENTATION", ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -364,52 +381,129 @@ fun MinarOsAppScreen(
             if (webView != null) {
                 AndroidView(
                     factory = {
-                        // Clean view detach safely removes dependencies from stale backstack targets
                         (webView.parent as? ViewGroup)?.removeView(webView)
                         webView
                     },
                     update = { view ->
+                        view.settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            databaseEnabled = true
+                        }
+
+                        // 🎯 1. Attach the Network Cache Bridge
+                        view.addJavascriptInterface(NativeNetworkCache(context2), "AndroidNetworkMock")
+
+                        val isCacheEnabledInSettings = sharedPrefs?.getBoolean("ENABLE_CACHE", false) ?: false
                         val currentStoredEndpoint = MosqueDataManager.getMosqueId(context2)
                         val freshTargetUrl = "https://minaros.com/$currentStoredEndpoint"
 
-                        // Look up the web caching preference state saved by your settings switch toggle
-                        val isCacheEnabledInSettings = sharedPrefs?.getBoolean("ENABLE_CACHE", false) ?: false
+                        // Set offline caching mode
+                        view.settings.cacheMode = if (isCacheEnabledInSettings && !isNetworkOnline) {
+                            android.webkit.WebSettings.LOAD_CACHE_ELSE_NETWORK
+                        } else {
+                            android.webkit.WebSettings.LOAD_DEFAULT
+                        }
 
-                        // 🎯 1. CONFIGURE THE CACHE POLICY STRATEGY
-                        view.settings.apply {
-                            if (isCacheEnabledInSettings) {
-                                if (isNetworkOnline) {
-                                    // Normal behavior: load from network, cache assets in background
-                                    cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
-                                } else {
-                                    // 🚀 NO INTERNET FIX: Force the layout engine to read exclusively from local cache
-                                    // This shows the last loaded page instantly instead of an error page!
-                                    cacheMode = android.webkit.WebSettings.LOAD_CACHE_ELSE_NETWORK
+                        // 🎯 2. The Network Lifecycle Interceptor
+                        view.webViewClient = object : android.webkit.WebViewClient() {
+                            override fun onReceivedError(
+                                v: WebView?,
+                                request: WebResourceRequest?,
+                                error: WebResourceError?
+                            ) {
+                                super.onReceivedError(v, request, error)
+                                if (request?.isForMainFrame == true) webViewProgress = 100
+                            }
+
+                            override fun onPageFinished(pageView: WebView?, url: String?) {
+                                super.onPageFinished(pageView, url)
+                                pageView?.clearHistory()
+                            }
+
+                            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                                super.onPageStarted(view, url, favicon)
+
+                                // 🚀 THE PROXY SCRIPT: Intercepts all Javascript Fetch/XHR calls
+                                val jsProxy = """
+                (function() {
+                    if (window.__networkMockInjected) return;
+                    window.__networkMockInjected = true;
+
+                    // Proxy 1: Intercept standard modern fetch API
+                    const originalFetch = window.fetch;
+                    window.fetch = async function(...args) {
+                        const reqUrl = typeof args[0] === 'string' ? args[0] : (args[0] ? args[0].url : 'unknown');
+                        try {
+                            const response = await originalFetch.apply(this, args);
+                            const clone = response.clone();
+                            clone.text().then(text => {
+                                // Save JSON responses to Android Disk
+                                if (text && (text.startsWith('{') || text.startsWith('['))) {
+                                    window.AndroidNetworkMock.savePayload(reqUrl, text);
                                 }
-                            } else {
-                                // Standard behavior if the client disables caching entirely
-                                cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+                            }).catch(e => {});
+                            return response;
+                        } catch (err) {
+                            // OFFLINE: Fetch failed. Feed the cached JSON back to the website!
+                            const cached = window.AndroidNetworkMock.getPayload(reqUrl);
+                            if (cached) {
+                                return new Response(cached, {
+                                    status: 200,
+                                    headers: { 'Content-Type': 'application/json' }
+                                });
+                            }
+                            throw err; // Nothing cached, fail normally
+                        }
+                    };
+
+                    // Proxy 2: Intercept older XMLHttpRequest API (Axios fallback)
+                    const originalXhrOpen = XMLHttpRequest.prototype.open;
+                    const originalXhrSend = XMLHttpRequest.prototype.send;
+                    XMLHttpRequest.prototype.open = function(method, url) {
+                        this._url = url;
+                        originalXhrOpen.apply(this, arguments);
+                    };
+                    XMLHttpRequest.prototype.send = function() {
+                        const cached = window.AndroidNetworkMock.getPayload(this._url);
+                        if (!navigator.onLine && cached) {
+                            // OFFLINE: Force XHR to succeed with cached Android data
+                            Object.defineProperty(this, 'responseText', { value: cached, writable: true });
+                            Object.defineProperty(this, 'status', { value: 200, writable: true });
+                            Object.defineProperty(this, 'readyState', { value: 4, writable: true });
+                            setTimeout(() => {
+                                if (this.onreadystatechange) this.onreadystatechange();
+                                if (this.onload) this.onload();
+                            }, 50);
+                            return;
+                        }
+                        
+                        this.addEventListener('load', function() {
+                            const text = this.responseText;
+                            if (text && (text.startsWith('{') || text.startsWith('['))) {
+                                window.AndroidNetworkMock.savePayload(this._url, text);
+                            }
+                        });
+                        originalXhrSend.apply(this, arguments);
+                    };
+                })();
+            """.trimIndent()
+
+                                view?.evaluateJavascript(jsProxy, null)
                             }
                         }
 
-                        // 🎯 2. HANDLE URL LOADING AND AUTO-REFRESH SCRIPT ACTIONS
+                        // 🎯 3. Execution Routing
                         if (isNetworkOnline) {
                             if (view.url != null && view.url != freshTargetUrl && view.url != "$freshTargetUrl/") {
                                 webViewProgress = 0
                                 isUrlLoaded = false
-
-                                view.webViewClient = object : WebViewClient() {
-                                    override fun onPageFinished(pageView: WebView?, url: String?) {
-                                        super.onPageFinished(pageView, url)
-                                        pageView?.clearHistory()
-                                    }
-                                }
                                 view.loadUrl(freshTargetUrl)
                             }
                         } else {
-                            // If offline but cache is enabled, force trigger a re-render pass on the current view
-                            // to pull the cached assets out of the local disk storage database
-                            if (isCacheEnabledInSettings && view.url == null) {
+                            // Cold Restart: Force the view instance to load the shell from the cache database
+                            if (isCacheEnabledInSettings && (view.url == null || view.url == "about:blank")) {
+                                webViewProgress = 0
                                 view.loadUrl(freshTargetUrl)
                             }
                         }
@@ -427,7 +521,7 @@ fun MinarOsAppScreen(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
-                        ) {
+                    ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(64.dp),
                             color = BrandColor,
@@ -506,5 +600,22 @@ fun MinarOsAppScreen(
 //                }
 //            }
         }
+    }
+}
+
+class NativeNetworkCache(context: Context) {
+    private val prefs: SharedPreferences = context.getSharedPreferences("MinarOSPrefs", Context.MODE_PRIVATE)
+
+    @JavascriptInterface
+    fun savePayload(url: String, data: String) {
+        // Creates a safe storage key from the URL and saves the JSON
+        val safeUrl = url.takeLast(50).replace("[^a-zA-Z0-9]".toRegex(), "_")
+        prefs.edit { putString("API_$safeUrl", data) }
+    }
+
+    @JavascriptInterface
+    fun getPayload(url: String): String? {
+        val safeUrl = url.takeLast(50).replace("[^a-zA-Z0-9]".toRegex(), "_")
+        return prefs.getString("API_$safeUrl", null)
     }
 }
