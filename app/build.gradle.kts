@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.minaros"
+    namespace = "com.example.minaros.screen"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.minaros"
+        applicationId = "com.example.minaros.screen"
         minSdk = 23
         targetSdk = 36
         versionCode = 1
