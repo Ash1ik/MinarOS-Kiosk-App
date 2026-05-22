@@ -44,26 +44,33 @@ fun AppNavigationWrapper(
 
 @Composable
 fun CustomSplashScreen(
-    onSplashFinished: () -> Unit // Callback to inform MainActivity the time is up
+    internalFlipAngle: Float, // 🎯 FIX 1: Pass down the layout rotation parameters here
+    onSplashFinished: () -> Unit
 ) {
-    // This side-effect safely handles the countdown timer within the splash layout scope
     LaunchedEffect(key1 = true) {
-        delay(2500L) // Holds your logo on screen cleanly for 2.5 seconds
-        onSplashFinished() // Triggers the navigation state branch change
+        delay(2500L)
+        onSplashFinished()
     }
 
-    Column(
+    // 🎯 FIX 2: Wrap the splash view inside a graphicsLayer matching your orientation flip calculation rules
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .background(Color.White)
+            .graphicsLayer {
+                rotationZ = internalFlipAngle
+            },
+        contentAlignment = Alignment.Center
     ) {
-        // The Transparent Mosque Logo
-        Image(
-            painter = painterResource(id = R.drawable.ic_minaros_logo),
-            contentDescription = "MinarOs Logo",
-            modifier = Modifier.size(160.dp) // Perfect visibility footprint for large TV panels
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_minaros_logo),
+                contentDescription = "MinarOs Logo",
+                modifier = Modifier.size(160.dp)
+            )
+        }
     }
 }

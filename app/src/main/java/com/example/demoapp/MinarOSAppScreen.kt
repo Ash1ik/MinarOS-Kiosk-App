@@ -132,6 +132,8 @@ fun MinarOsAppScreen(
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
                     settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.databaseEnabled = true
                     setBackgroundColor(android.graphics.Color.WHITE)
 
                     webViewClient = object : WebViewClient() {
@@ -370,22 +372,46 @@ fun MinarOsAppScreen(
                         val currentStoredEndpoint = MosqueDataManager.getMosqueId(context2)
                         val freshTargetUrl = "https://minaros.com/$currentStoredEndpoint"
 
-                        if (view.url != null && view.url != freshTargetUrl && view.url != "$freshTargetUrl/" && isNetworkOnline) {
-                            webViewProgress = 0
-                            isUrlLoaded = false
+                        // Look up the web caching preference state saved by your settings switch toggle
+                        val isCacheEnabledInSettings = sharedPrefs?.getBoolean("ENABLE_CACHE", false) ?: false
 
-                            // 🎯 THE FIX: Attach a dynamic lifecycle listener to intercept completion passes
-                            view.webViewClient = object : android.webkit.WebViewClient() {
-                                override fun onPageFinished(pageView: android.webkit.WebView?, url: String?) {
-                                    super.onPageFinished(pageView, url)
-
-                                    // 🚀 Flush previous navigation routes out of memory sectors safely
-                                    // only after the current destination has stabilized!
-                                    pageView?.clearHistory()
+                        // 🎯 1. CONFIGURE THE CACHE POLICY STRATEGY
+                        view.settings.apply {
+                            if (isCacheEnabledInSettings) {
+                                if (isNetworkOnline) {
+                                    // Normal behavior: load from network, cache assets in background
+                                    cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+                                } else {
+                                    // 🚀 NO INTERNET FIX: Force the layout engine to read exclusively from local cache
+                                    // This shows the last loaded page instantly instead of an error page!
+                                    cacheMode = android.webkit.WebSettings.LOAD_CACHE_ELSE_NETWORK
                                 }
+                            } else {
+                                // Standard behavior if the client disables caching entirely
+                                cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
                             }
+                        }
 
-                            view.loadUrl(freshTargetUrl)
+                        // 🎯 2. HANDLE URL LOADING AND AUTO-REFRESH SCRIPT ACTIONS
+                        if (isNetworkOnline) {
+                            if (view.url != null && view.url != freshTargetUrl && view.url != "$freshTargetUrl/") {
+                                webViewProgress = 0
+                                isUrlLoaded = false
+
+                                view.webViewClient = object : WebViewClient() {
+                                    override fun onPageFinished(pageView: WebView?, url: String?) {
+                                        super.onPageFinished(pageView, url)
+                                        pageView?.clearHistory()
+                                    }
+                                }
+                                view.loadUrl(freshTargetUrl)
+                            }
+                        } else {
+                            // If offline but cache is enabled, force trigger a re-render pass on the current view
+                            // to pull the cached assets out of the local disk storage database
+                            if (isCacheEnabledInSettings && view.url == null) {
+                                view.loadUrl(freshTargetUrl)
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxSize()
@@ -419,66 +445,66 @@ fun MinarOsAppScreen(
             }
 
             // TV-OPTIMIZED OFFLINE ERROR ROW LAYER
-            if (!isNetworkOnline) {
-                LaunchedEffect(Unit) {
-                    delay(100)
-                    try { retryButtonFocusRequester.requestFocus() } catch (e: Exception) {}
-                }
-
-                Box(
-                    modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FA)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.width(520.dp).padding(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Warning,
-                            contentDescription = "Offline Error Indicator",
-                            tint = BrandColor,
-                            modifier = Modifier.size(80.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Text(
-                            text = "Connection Lost",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF212529)
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text(
-                            text = "Unable to load display layout dashboard. Please verify your physical smart display Ethernet link or local Wi-Fi configuration routing access parameters.",
-                            fontSize = 16.sp,
-                            color = Color(0xFF6C757D),
-                            textAlign = TextAlign.Center,
-                            lineHeight = 24.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        TvButton(
-                            text = "Retry Connection",
-                            modifier = Modifier
-                                .width(220.dp)
-                                .focusRequester(retryButtonFocusRequester),
-                            onClick = {
-                                isNetworkOnline = checkInternetConnection(context2)
-
-                                if (isNetworkOnline && webView != null) {
-                                    webViewProgress = 0
-                                    webView.reload()
-                                }
-                            }
-                        )
-                    }
-                }
-            }
+//            if (!isNetworkOnline) {
+//                LaunchedEffect(Unit) {
+//                    delay(100)
+//                    try { retryButtonFocusRequester.requestFocus() } catch (e: Exception) {}
+//                }
+//
+//                Box(
+//                    modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FA)),
+//                    contentAlignment = Alignment.Center
+//                ) {
+//                    Column(
+//                        horizontalAlignment = Alignment.CenterHorizontally,
+//                        verticalArrangement = Arrangement.Center,
+//                        modifier = Modifier.width(520.dp).padding(24.dp)
+//                    ) {
+//                        Icon(
+//                            imageVector = Icons.Filled.Warning,
+//                            contentDescription = "Offline Error Indicator",
+//                            tint = BrandColor,
+//                            modifier = Modifier.size(80.dp)
+//                        )
+//
+//                        Spacer(modifier = Modifier.height(24.dp))
+//
+//                        Text(
+//                            text = "Connection Lost",
+//                            fontSize = 28.sp,
+//                            fontWeight = FontWeight.Bold,
+//                            color = Color(0xFF212529)
+//                        )
+//
+//                        Spacer(modifier = Modifier.height(12.dp))
+//
+//                        Text(
+//                            text = "Unable to load display layout dashboard. Please verify your physical smart display Ethernet link or local Wi-Fi configuration routing access parameters.",
+//                            fontSize = 16.sp,
+//                            color = Color(0xFF6C757D),
+//                            textAlign = TextAlign.Center,
+//                            lineHeight = 24.sp
+//                        )
+//
+//                        Spacer(modifier = Modifier.height(32.dp))
+//
+//                        TvButton(
+//                            text = "Retry Connection",
+//                            modifier = Modifier
+//                                .width(220.dp)
+//                                .focusRequester(retryButtonFocusRequester),
+//                            onClick = {
+//                                isNetworkOnline = checkInternetConnection(context2)
+//
+//                                if (isNetworkOnline && webView != null) {
+//                                    webViewProgress = 0
+//                                    webView.reload()
+//                                }
+//                            }
+//                        )
+//                    }
+//                }
+//            }
         }
     }
 }

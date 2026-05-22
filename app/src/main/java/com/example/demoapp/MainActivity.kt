@@ -94,9 +94,9 @@ class MainActivity : ComponentActivity() {
                 when (state) {
                     AppLaunchState.SPLASH -> {
                         CustomSplashScreen(
+                            internalFlipAngle = internalFlipAngle, // 🎯 FIX 3: Push the live angle calculation context downstream
                             onSplashFinished = {
-                                // Splash timer ended. Look up the persistent ID to route the user safely.
-                                val savedMosqueId = MosqueDataManager.getMosqueId(context = this@MainActivity)
+                                val savedMosqueId = MosqueDataManager.getMosqueId(this@MainActivity)
 
                                 currentLaunchState = if (savedMosqueId.isEmpty()) {
                                     AppLaunchState.WELCOME
@@ -146,7 +146,7 @@ class MainActivity : ComponentActivity() {
             }
 
             ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT -> {
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
                 internalFlipAngle = 180f
             }
 
@@ -156,7 +156,7 @@ class MainActivity : ComponentActivity() {
             }
 
             ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE -> {
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
                 internalFlipAngle = 180f
             }
         }

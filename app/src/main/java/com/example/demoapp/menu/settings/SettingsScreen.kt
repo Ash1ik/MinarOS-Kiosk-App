@@ -326,7 +326,7 @@ fun SettingsScreen(
                             sharedPrefs.edit { putBoolean("ENABLE_CACHE", nextState) }
                         }
                         .background(
-                            if (isCacheRowFocused) Color.LightGray.copy(alpha = 0.3f) else Color.Transparent,
+                            if (isCacheRowFocused) Color.LightGray else Color.Transparent,
                             RoundedCornerShape(8.dp)
                         )
                         .padding(12.dp)
