@@ -313,30 +313,35 @@ fun MinarOsAppScreen(
                         icon = ImageVector.vectorResource(R.drawable.ic_refresh),
                         modifier = Modifier.focusRequester(firstItemFocusRequester)
                     ) {
-                        webView?.reload()
-                        updatedOrientation?.let { onOrientationChange(it) }
-                        scope.launch { drawerState.close() }
-                    }
-
-                    HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
-
-                    DrawerMenuItem(
-                        title = "Rotate Screen",
-                        subtitle = "Toggle next orientation",
-                        icon = ImageVector.vectorResource(R.drawable.ic_rotation)
-                    ) {
-                        scope.launch { drawerState.close() }
-
-                        val nextOrientation = when (currentOrientation) {
-                            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
-                            ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
-                            ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                            else -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                        if (isNetworkOnline) {
+                            webView?.reload()
+                            updatedOrientation?.let { onOrientationChange(it) }
+                            scope.launch { drawerState.close() }
+                        } else {
+                            updatedOrientation?.let { onOrientationChange(it) }
+                            scope.launch { drawerState.close() }
                         }
-
-                        onOrientationChange(nextOrientation)
                     }
+
+//                    HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+//
+//                    DrawerMenuItem(
+//                        title = "Rotate Screen",
+//                        subtitle = "Toggle next orientation",
+//                        icon = ImageVector.vectorResource(R.drawable.ic_rotation)
+//                    ) {
+//                        scope.launch { drawerState.close() }
+//
+//                        val nextOrientation = when (currentOrientation) {
+//                            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+//                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+//                            ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+//                            ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+//                            else -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+//                        }
+//
+//                        onOrientationChange(nextOrientation)
+//                    }
 
                     HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
 
