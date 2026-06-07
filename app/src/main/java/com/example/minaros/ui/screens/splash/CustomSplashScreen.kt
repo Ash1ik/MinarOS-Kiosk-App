@@ -1,4 +1,4 @@
-package com.example.minaros
+package com.example.minaros.ui.screens.splash
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -11,53 +11,32 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import com.example.minaros.screen.R
 
-@Composable
-fun AppNavigationWrapper(
-    currentOrientation: Int,
-    internalFlipAngle: Float,
-    onOrientationChange: (Int) -> Unit,
-    onAlwaysOnChanged: (Boolean) -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    // If the TV requires an upside-down mount adjustment,
-                    // this spins the responsive window perfectly into place.
-                    rotationZ = internalFlipAngle
-                }
-        ) {
-            MinarOSNavGraph(
-                onOrientationChange = onOrientationChange,
-                onAlwaysOnChanged = onAlwaysOnChanged,
-                currentOrientation = currentOrientation
-            )
-        }
-    }
-}
-
+/**
+ * A custom, animated splash screen displayed during application cold boots.
+ * Enforces the same visual orientation rules as the main app wrapper.
+ *
+ * @param internalFlipAngle The calculated degrees to rotate the layout (e.g., 0f or 180f).
+ * @param onSplashFinished Callback triggered after the minimum display duration completes.
+ */
 @Composable
 fun CustomSplashScreen(
-    internalFlipAngle: Float, // 🎯 FIX 1: Pass down the layout rotation parameters here
+    internalFlipAngle: Float,
     onSplashFinished: () -> Unit
 ) {
+    // Triggers the background timer safely tied to the Composable lifecycle
     LaunchedEffect(key1 = true) {
-        delay(2500L)
+        delay(2500L) // 2.5 second display duration
         onSplashFinished()
     }
 
-    // 🎯 FIX 2: Wrap the splash view inside a graphicsLayer matching your orientation flip calculation rules
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
             .graphicsLayer {
+                // Ensures the splash screen matches the TV's mounted orientation instantly
                 rotationZ = internalFlipAngle
             },
         contentAlignment = Alignment.Center

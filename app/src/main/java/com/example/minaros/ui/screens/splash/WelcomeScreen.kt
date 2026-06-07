@@ -1,4 +1,4 @@
-package com.example.minaros
+package com.example.minaros.ui.screens.splash
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -8,12 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,8 +25,19 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.minaros.data.MosqueDataManager
+import com.example.minaros.screen.R
 import com.example.minaros.ui.theme.BrandColor
 
+/**
+ * The initial onboarding screen displayed when the app has no saved Mosque ID.
+ * * This screen is heavily optimized for Android TV / Fire OS navigation (D-Pad),
+ * utilizing [MutableInteractionSource] to provide visual feedback when UI elements
+ * are focused via a physical remote control.
+ *
+ * @param onIdSuccessfullySaved Callback triggered when a valid 6-digit ID is
+ * securely stored in the local database, allowing the main router to proceed.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WelcomeScreen(
@@ -39,16 +45,17 @@ fun WelcomeScreen(
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     val saveButtonFocusRequester = remember { FocusRequester() }
 
     var mosqueIdInput by remember { mutableStateOf("") }
     var isInputError by remember { mutableStateOf(false) }
 
-    // 🎯 TV FOCUS TRACKER: Reads hardware remote navigation state events cleanly
+    // 🎯 TV FOCUS TRACKER: Reads hardware remote navigation state events cleanly.
+    // This allows us to change the button color dynamically when the user hovers over it with a TV remote.
     val buttonInteractionSource = remember { MutableInteractionSource() }
     val isButtonFocused by buttonInteractionSource.collectIsFocusedAsState()
-
-    val keyboardController = LocalSoftwareKeyboardController.current
 
     Box(
         modifier = Modifier
@@ -82,6 +89,7 @@ fun WelcomeScreen(
             OutlinedTextField(
                 value = mosqueIdInput,
                 onValueChange = { value ->
+                    // Validation: Restrict to exactly 6 digits
                     if (value.length <= 6 && value.all { it.isDigit() }) {
                         mosqueIdInput = value
                         isInputError = false
@@ -98,6 +106,8 @@ fun WelcomeScreen(
                 ),
                 keyboardActions = KeyboardActions(
                     onDone = {
+                        // When the user clicks 'Done' on the keyboard, hide the keyboard
+                        // and instantly snap the TV remote focus to the Save button
                         keyboardController?.hide()
                         saveButtonFocusRequester.requestFocus()
                     }
@@ -123,14 +133,14 @@ fun WelcomeScreen(
                         MosqueDataManager.saveMosqueId(context, mosqueIdInput)
                         onIdSuccessfullySaved()
                     } else {
+                        // Triggers the red error border on the text field if the ID is too short
                         isInputError = true
                     }
                 },
-                // 🎯 Pass our custom hardware interaction stream right here
                 interactionSource = buttonInteractionSource,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    // Dynamically swaps backdrops and inner texts based on D-pad highlight rules
+                    // Dynamically swaps container and text colors based on TV remote D-pad highlighting
                     containerColor = if (isButtonFocused) BrandColor else Color.LightGray.copy(alpha = 0.4f),
                     contentColor = if (isButtonFocused) Color.White else Color.Gray
                 ),

@@ -1,4 +1,4 @@
-package com.example.minaros.menu.settings.sections
+package com.example.minaros.ui.screens.settings.sections
 
 import android.content.Context
 import android.content.pm.ActivityInfo
@@ -14,31 +14,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -49,10 +31,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
-import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.example.minaros.ui.theme.BrandColor
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+/**
+ * A sub-menu that allows the user to manually flip or lock the application's visual orientation.
+ * Useful for TVs that have been physically mounted upside down or vertically.
+ *
+ * @param selectedRotation The current active orientation flag from [ActivityInfo].
+ * @param onRotationSelected Callback to apply and save the new orientation state.
+ */
 @Composable
 fun RotationSection(
     selectedRotation: Int,
@@ -85,14 +72,13 @@ fun RotationSection(
                 )
                 .onFocusChanged { isHeaderFocused = it.isFocused }
                 .focusable()
-                // 🎯 FIX 1: Intercept the hardware D-pad click directly for instant 1-click expansion
                 .onKeyEvent { keyEvent ->
                     if (isHeaderFocused &&
                         keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
                         (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
                                 keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)) {
                         isExpanded = !isExpanded
-                        return@onKeyEvent true // Event consumed successfully
+                        return@onKeyEvent true
                     }
                     false
                 }
@@ -137,7 +123,6 @@ fun RotationSection(
                             )
                             .onFocusChanged { isItemFocused = it.isFocused }
                             .focusable()
-                            // 🎯 FIX 2: Intercept hardware selection inside the sub-list for single-click confirmation
                             .onKeyEvent { keyEvent ->
                                 if (isItemFocused &&
                                     keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
@@ -196,9 +181,7 @@ fun RotationSection(
             },
             confirmButton = {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -207,7 +190,7 @@ fun RotationSection(
 
                     Button(
                         onClick = { showConfirmationDialog = false },
-                        interactionSource = cancelInteraction, // 🎯 Binds focus state track
+                        interactionSource = cancelInteraction,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isCancelFocused) BrandColor else Color.LightGray.copy(alpha = 0.4f),
                             contentColor = if (isCancelFocused) Color.White else Color.Gray
@@ -223,9 +206,10 @@ fun RotationSection(
                     Button(
                         onClick = {
                             sharedPrefs.edit { putInt("SAVED_ORIENTATION", pendingRotationFlag) }
+                            onRotationSelected(pendingRotationFlag) // 🎯 Update the upstream parent state!
                             showConfirmationDialog = false
                         },
-                        interactionSource = saveInteraction, // 🎯 Binds focus state track
+                        interactionSource = saveInteraction,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isSaveFocused) BrandColor else Color.LightGray.copy(alpha = 0.4f),
                             contentColor = if (isSaveFocused) Color.White else Color.Gray

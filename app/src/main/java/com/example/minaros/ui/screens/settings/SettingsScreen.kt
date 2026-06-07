@@ -1,4 +1,4 @@
-package com.example.minaros.menu.settings
+package com.example.minaros.ui.screens.settings
 
 import android.content.Context
 import android.content.pm.ActivityInfo
@@ -37,15 +37,24 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
-import com.example.minaros.MosqueDataManager
-import com.example.minaros.TvButton
-import com.example.minaros.menu.settings.sections.ConstraintsSection
-import com.example.minaros.menu.settings.sections.RotationSection
-import com.example.minaros.menu.settings.sections.StorageSection
-import com.example.minaros.ui.theme.BrandColor
+import com.example.minaros.data.MosqueDataManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.example.minaros.ui.screens.settings.sections.ConstraintsSection
+import com.example.minaros.ui.screens.settings.sections.RotationSection
+import com.example.minaros.ui.screens.settings.sections.StorageSection
+import com.example.minaros.ui.components.TvButton
+import com.example.minaros.ui.theme.BrandColor
 
+/**
+ * The master configuration screen for the application.
+ * Contains sub-sections for Mosque ID, rotation locking, web caching, storage, and constraints.
+ * Highly optimized for D-Pad / Smart TV navigation.
+ *
+ * @param onBackPressed Callback to pop the backstack and return to the main dashboard.
+ * @param onOrientationChange Callback triggered when the user saves a new rotation setting.
+ * @param onAlwaysOnChanged Callback triggered when the user toggles the screen wake-lock.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -58,20 +67,18 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    // Focus Requesters
+    // Focus Requesters for hardware D-pad routing
     val backButtonFocus = remember { FocusRequester() }
     val containerBoxFocus = remember { FocusRequester() }
     val textFieldFocus = remember { FocusRequester() }
     val saveButtonFocus = remember { FocusRequester() }
 
-    // Intercept states
     var isEditingMode by remember { mutableStateOf(false) }
 
-    // Interaction sources to listen to baseline TV focus state events
     val containerInteractionSource = remember { MutableInteractionSource() }
     val isContainerFocused by containerInteractionSource.collectIsFocusedAsState()
 
-    // State bindings
+    // Persistent State Bindings
     var currentEndpoint by remember { mutableStateOf(MosqueDataManager.getMosqueId(context)) }
     var isCacheEnabled by remember { mutableStateOf(sharedPrefs.getBoolean("ENABLE_CACHE", false)) }
     var updateStatus by remember { mutableStateOf("App is up to date (v1.0)") }
@@ -83,6 +90,7 @@ fun SettingsScreen(
     val configuration = LocalConfiguration.current
     val isTelevision = (configuration.uiMode and Configuration.UI_MODE_TYPE_MASK) == Configuration.UI_MODE_TYPE_TELEVISION
 
+    // Automatically focus the back button upon entry so the user isn't lost
     LaunchedEffect(Unit) {
         delay(100)
         backButtonFocus.requestFocus()
@@ -131,6 +139,7 @@ fun SettingsScreen(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
 
+                // --- 1. MOSQUE ID SECTION ---
                 Text(
                     text = "Mosque ID",
                     fontSize = 18.sp,
@@ -139,26 +148,17 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 🎯 FIXED WRAPPER CONTAINER: Focusable at all times to prevent hardware back-snapping
                 if (!isTelevision) {
-                    // 📱 PHONE MODE: Clean, responsive, standard text field without focus wrappers or locks
+                    // Mobile Implementation
                     OutlinedTextField(
                         value = currentEndpoint,
                         onValueChange = { value ->
-                            if (value.length <= 6 && value.all { it.isDigit() }) {
-                                currentEndpoint = value
-                            }
+                            if (value.length <= 6 && value.all { it.isDigit() }) currentEndpoint = value
                         },
                         singleLine = true,
-                        readOnly = false, // Always ready to type instantly on touch tap
-                        placeholder = {
-                            Text("Enter 6-digit ID", color = Color.Gray.copy(alpha = 0.6f))
-                        },
+                        placeholder = { Text("Enter 6-digit ID", color = Color.Gray.copy(alpha = 0.6f)) },
                         isError = currentEndpoint.isNotEmpty() && currentEndpoint.length < 6,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done
-                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(
                             onDone = {
                                 keyboardController?.hide()
@@ -178,6 +178,7 @@ fun SettingsScreen(
                         )
                     )
                 } else {
+                    // TV Implementation (Focus Stealing Wrapper)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -186,10 +187,7 @@ fun SettingsScreen(
                                 up = backButtonFocus
                                 down = saveButtonFocus
                             }
-                            .focusable(
-                                enabled = true,
-                                interactionSource = containerInteractionSource
-                            )
+                            .focusable(enabled = true, interactionSource = containerInteractionSource)
                             .onKeyEvent { keyEvent ->
                                 if (!isEditingMode && isContainerFocused &&
                                     keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
@@ -197,14 +195,12 @@ fun SettingsScreen(
                                             keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)
                                 ) {
                                     isEditingMode = true
-                                    // Hand over focus to the inner field before popping open the IME
                                     textFieldFocus.requestFocus()
                                     keyboardController?.show()
                                     return@onKeyEvent true
                                 }
                                 false
                             }
-                            // 🎯 HOVER COLOR CHANGED: Uses a clean, clear Gray overlay during focus tracking passes
                             .background(
                                 if (isContainerFocused && !isEditingMode) Color(0xFFE0E0E0) else Color.Transparent,
                                 RoundedCornerShape(12.dp)
@@ -213,20 +209,13 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = currentEndpoint,
                             onValueChange = { value ->
-                                if (value.length <= 6 && value.all { it.isDigit() }) {
-                                    currentEndpoint = value
-                                }
+                                if (value.length <= 6 && value.all { it.isDigit() }) currentEndpoint = value
                             },
                             singleLine = true,
                             readOnly = !isEditingMode,
-                            placeholder = {
-                                Text("Enter 6-digit ID", color = Color.Gray.copy(alpha = 0.6f))
-                            },
+                            placeholder = { Text("Enter 6-digit ID", color = Color.Gray.copy(alpha = 0.6f)) },
                             isError = currentEndpoint.isNotEmpty() && currentEndpoint.length < 6,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Number,
-                                imeAction = ImeAction.Done
-                            ),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(
                                 onDone = {
                                     if (currentEndpoint.length == 6) {
@@ -240,14 +229,10 @@ fun SettingsScreen(
                                 .fillMaxWidth()
                                 .focusRequester(textFieldFocus)
                                 .onFocusChanged { focusState ->
-                                    if (!focusState.isFocused && !isContainerFocused) {
-                                        isEditingMode = false
-                                    }
+                                    if (!focusState.isFocused && !isContainerFocused) isEditingMode = false
                                 },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = if (isEditingMode) Color.LightGray.copy(
-                                    alpha = 0.2f
-                                ) else Color.Transparent,
+                                focusedContainerColor = if (isEditingMode) Color.LightGray.copy(alpha = 0.2f) else Color.Transparent,
                                 unfocusedContainerColor = Color.Transparent,
                                 focusedBorderColor = if (isEditingMode) BrandColor else Color.LightGray,
                                 unfocusedBorderColor = Color.LightGray,
@@ -264,9 +249,7 @@ fun SettingsScreen(
                     text = "Save Configuration",
                     modifier = Modifier
                         .focusRequester(saveButtonFocus)
-                        .focusProperties {
-                            up = containerBoxFocus
-                        },
+                        .focusProperties { up = containerBoxFocus },
                     onClick = {
                         if (currentEndpoint.length == 6) {
                             MosqueDataManager.saveMosqueId(context, currentEndpoint)
@@ -279,7 +262,7 @@ fun SettingsScreen(
 
                 SectionDivider()
 
-                // 3. Screen Rotation Section
+                // --- 2. ROTATION SECTION ---
                 RotationSection(
                     selectedRotation = selectedRotation,
                     onRotationSelected = {
@@ -290,13 +273,8 @@ fun SettingsScreen(
 
                 SectionDivider()
 
-                // 2. Web Caching Setting
-                Text(
-                    "Web Caching",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BrandColor
-                )
+                // --- 3. WEB CACHING SECTION ---
+                Text("Web Caching", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = BrandColor)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 var isCacheRowFocused by remember { mutableStateOf(false) }
@@ -348,29 +326,26 @@ fun SettingsScreen(
 
                 SectionDivider()
 
-                // 4. Clear Cache Memory Section
+                // --- 4. CLEAR CACHE SECTION ---
                 StorageSection()
 
                 SectionDivider()
 
-                // 5. App Always-On Mode Section
+                // --- 5. ALWAYS-ON MODE SECTION ---
                 ConstraintsSection(
                     isAlwaysOnEnabled = isAlwaysOnEnabled,
                     onAlwaysOnChanged = {
                         isAlwaysOnEnabled = it
+                        // 🎯 FIX: Explicitly save the wakelock preference so it persists across reboots!
+                        sharedPrefs.edit { putBoolean("ALWAYS_ON_MODE", it) }
                         onAlwaysOnChanged(it)
                     }
                 )
 
                 SectionDivider()
 
-                // 6. System Updates
-                Text(
-                    "System Updates",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BrandColor
-                )
+                // --- 6. SYSTEM UPDATES SECTION ---
+                Text("System Updates", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = BrandColor)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TvButton(
@@ -390,8 +365,10 @@ fun SettingsScreen(
         }
     }
 }
+
+/** Private helper composable to render uniform horizontal dividers between settings blocks */
 @Composable
-fun SectionDivider() {
+private fun SectionDivider() {
     Column {
         Spacer(modifier = Modifier.height(20.dp))
         HorizontalDivider(color = Color.LightGray.copy(alpha = 0.6f), thickness = 1.dp)

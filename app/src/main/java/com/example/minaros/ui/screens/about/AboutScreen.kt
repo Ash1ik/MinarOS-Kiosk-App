@@ -1,4 +1,4 @@
-package com.example.minaros.menu.about
+package com.example.minaros.ui.screens.about
 
 import android.view.KeyEvent
 import androidx.compose.foundation.Image
@@ -44,11 +44,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.minaros.R
-import com.example.minaros.ui.theme.BrandColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.example.minaros.screen.R
+import com.example.minaros.ui.theme.BrandColor
 
+/**
+ * A static informational screen displaying the application's branding, purpose, and version details.
+ * Implements a custom D-Pad scroll handler since standard Compose vertical scroll does not
+ * naturally respond to TV remotes unless focusable interactive elements are present on the screen.
+ *
+ * @param onBackPressed Callback to pop the backstack and return to the main dashboard.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(
@@ -121,7 +128,7 @@ fun AboutScreen(
                     .onFocusChanged { isContentFocused = it.isFocused }
                     .focusable()
                     // 🎯 HARDWARE D-PAD SCROLL INTERCEPTOR:
-                    // Manually animate the ScrollState up or down on hardware button ticks!
+                    // Manually animate the ScrollState up or down on hardware button ticks
                     .onKeyEvent { keyEvent ->
                         if (isContentFocused && keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                             when (keyEvent.nativeKeyEvent.keyCode) {
@@ -134,7 +141,7 @@ fun AboutScreen(
                                 }
                                 KeyEvent.KEYCODE_DPAD_UP -> {
                                     coroutineScope.launch {
-                                        // Scroll up safely. If we hit the absolute top, move focus back to the header back arrow!
+                                        // Scroll up safely. If we hit the absolute top, move focus back to the header!
                                         if (contentScrollState.value == 0) {
                                             backButtonFocus.requestFocus()
                                         } else {
