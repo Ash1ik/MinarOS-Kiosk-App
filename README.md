@@ -6,6 +6,10 @@
 
 Android TV kiosk-mode digital signage for mosques. Loads the MinarOS mosque management dashboard in a fullscreen WebView with offline caching, boot auto-start, and TV remote/D-pad navigation.
 
+## Demo Video
+
+<video src="docs/tutorial.mp4" width="100%" controls></video>
+
 ## Badges
 
 ![Min SDK](https://img.shields.io/badge/minSdk-23-brightgreen) &nbsp; ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-blueviolet)
