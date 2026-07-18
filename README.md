@@ -8,20 +8,9 @@ Android TV kiosk-mode digital signage for mosques. Loads the MinarOS mosque mana
 
 ## Screenshots
 
-<!--
-  TODO: Capture and place remaining screenshots in docs/screenshots/.
-  Already captured:
-    ✓ Splash screen                       -> docs/screenshots/splash.png
-    ✓ Mosque ID entry (welcome) screen    -> docs/screenshots/welcome.png
-    ✓ Dashboard WebView                   -> docs/screenshots/dashboard.png
-  Still needed:
-    ✗ Settings screen with drawer open   -> docs/screenshots/settings.png
-    ✗ About screen                        -> docs/screenshots/about.png
--->
-
 | Splash | Welcome | Dashboard | Settings | About |
 |--------|---------|-----------|----------|-------|
-| <img src="docs/screenshots/splash.png" width="200" alt="Splash screen with MinarOS branding"/> | <img src="docs/screenshots/welcome.png" width="200" alt="Mosque ID entry screen"/> | <img src="docs/screenshots/dashboard.png" width="200" alt="Main WebView dashboard with navigation drawer"/> | <img src="docs/screenshots/settings.png" width="200" alt="Settings screen"/> | <img src="docs/screenshots/about.png" width="200" alt="About screen"/> |
+| <img src="docs/screenshots/splash.png" width="200" alt="Splash screen with MinarOS branding"/> | <img src="docs/screenshots/welcome.jpeg" width="200" alt="Mosque ID entry screen"/> | <img src="docs/screenshots/dashboard.jpeg" width="200" alt="Main WebView dashboard"/> | <img src="docs/screenshots/settings.jpeg" width="200" alt="Settings screen"/> | <img src="docs/screenshots/about.jpeg" width="200" alt="About screen"/> |
 
 ## Features
 
