@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/minaros-logo.svg" width="300" alt="MinarOS Logo">
+</p>
+
 # MinarOS Screen
 
 Android TV kiosk-mode digital signage for mosques. Loads the MinarOS mosque management dashboard in a fullscreen WebView with offline caching, boot auto-start, and TV remote/D-pad navigation.
