@@ -8,7 +8,7 @@ Android TV kiosk-mode digital signage for mosques. Loads the MinarOS mosque mana
 
 ## Demo Video
 
-<video src="docs/tutorial.mp4" width="100%" controls></video>
+▶️ [Watch the tutorial video](docs/tutorial.mp4) — click to view or download.
 
 ## Badges
 
